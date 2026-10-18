@@ -1,0 +1,241 @@
+{
+  "music": {
+    "bgm_home": {
+      "file": "bgm_home.mp3",
+      "duration": 76.8,
+      "bpm": 100,
+      "loop": true
+    },
+    "bgm_forest": {
+      "file": "bgm_forest.mp3",
+      "duration": 61.9355,
+      "bpm": 124,
+      "loop": true
+    },
+    "bgm_village": {
+      "file": "bgm_village.mp3",
+      "duration": 64.0,
+      "bpm": 120,
+      "loop": true
+    },
+    "bgm_lake": {
+      "file": "bgm_lake.mp3",
+      "duration": 66.2068,
+      "bpm": 116,
+      "loop": true
+    },
+    "bgm_boss": {
+      "file": "bgm_boss.mp3",
+      "duration": 61.7142,
+      "bpm": 140,
+      "loop": true
+    },
+    "bgm_shelter": {
+      "file": "bgm_shelter.mp3",
+      "duration": 72.0,
+      "bpm": 80,
+      "loop": true
+    },
+    "stinger_clear": {
+      "file": "stinger_clear.mp3",
+      "duration": 3.5996,
+      "bpm": 132,
+      "loop": false
+    },
+    "stinger_fail": {
+      "file": "stinger_fail.mp3",
+      "duration": 2.5998,
+      "bpm": 100,
+      "loop": false
+    },
+    "stinger_evolve": {
+      "file": "stinger_evolve.mp3",
+      "duration": 3.1983,
+      "bpm": 120,
+      "loop": false
+    }
+  },
+  "sfx": {
+    "ui_tap": {
+      "file": "ui_tap.mp3",
+      "duration": 0.05
+    },
+    "ui_open": {
+      "file": "ui_open.mp3",
+      "duration": 0.3425
+    },
+    "ui_close": {
+      "file": "ui_close.mp3",
+      "duration": 0.2647
+    },
+    "ui_confirm": {
+      "file": "ui_confirm.mp3",
+      "duration": 0.4675
+    },
+    "ui_locked": {
+      "file": "ui_locked.mp3",
+      "duration": 0.2055
+    },
+    "spray_start": {
+      "file": "spray_start.mp3",
+      "duration": 0.2122
+    },
+    "spray_loop": {
+      "file": "spray_loop.mp3",
+      "duration": 2.0,
+      "loop": true
+    },
+    "pressure_full": {
+      "file": "pressure_full.mp3",
+      "duration": 0.78
+    },
+    "goo_hit_1": {
+      "file": "goo_hit_1.mp3",
+      "duration": 0.0909
+    },
+    "goo_hit_2": {
+      "file": "goo_hit_2.mp3",
+      "duration": 0.1008
+    },
+    "goo_hit_3": {
+      "file": "goo_hit_3.mp3",
+      "duration": 0.1094
+    },
+    "goo_burst_1": {
+      "file": "goo_burst_1.mp3",
+      "duration": 0.3498
+    },
+    "goo_burst_2": {
+      "file": "goo_burst_2.mp3",
+      "duration": 0.3675
+    },
+    "goo_burst_3": {
+      "file": "goo_burst_3.mp3",
+      "duration": 0.3781
+    },
+    "goo_burst_big": {
+      "file": "goo_burst_big.mp3",
+      "duration": 1.02
+    },
+    "goo_split": {
+      "file": "goo_split.mp3",
+      "duration": 0.29
+    },
+    "enemy_spit": {
+      "file": "enemy_spit.mp3",
+      "duration": 0.1531
+    },
+    "enemy_charge": {
+      "file": "enemy_charge.mp3",
+      "duration": 0.4976
+    },
+    "enemy_dash": {
+      "file": "enemy_dash.mp3",
+      "duration": 0.2984
+    },
+    "enemy_land": {
+      "file": "enemy_land.mp3",
+      "duration": 0.4041
+    },
+    "boss_roar": {
+      "file": "boss_roar.mp3",
+      "duration": 1.5181
+    },
+    "player_hit": {
+      "file": "player_hit.mp3",
+      "duration": 0.2515
+    },
+    "shield_pop": {
+      "file": "shield_pop.mp3",
+      "duration": 0.3253
+    },
+    "pickup_xp": {
+      "file": "pickup_xp.mp3",
+      "duration": 0.1115
+    },
+    "pickup_coin": {
+      "file": "pickup_coin.mp3",
+      "duration": 0.2175
+    },
+    "heal": {
+      "file": "heal.mp3",
+      "duration": 0.655
+    },
+    "cocoon_hit": {
+      "file": "cocoon_hit.mp3",
+      "duration": 0.1159
+    },
+    "rescue": {
+      "file": "rescue.mp3",
+      "duration": 2.03
+    },
+    "chirp_1": {
+      "file": "chirp_1.mp3",
+      "duration": 0.2792
+    },
+    "chirp_2": {
+      "file": "chirp_2.mp3",
+      "duration": 0.3425
+    },
+    "chirp_3": {
+      "file": "chirp_3.mp3",
+      "duration": 0.308
+    },
+    "room_clear": {
+      "file": "room_clear.mp3",
+      "duration": 1.403
+    },
+    "gate_open": {
+      "file": "gate_open.mp3",
+      "duration": 0.905
+    },
+    "level_up": {
+      "file": "level_up.mp3",
+      "duration": 1.28
+    },
+    "card_pick": {
+      "file": "card_pick.mp3",
+      "duration": 0.53
+    },
+    "revive": {
+      "file": "revive.mp3",
+      "duration": 1.28
+    },
+    "coin_tick": {
+      "file": "coin_tick.mp3",
+      "duration": 0.0759
+    },
+    "coin_burst": {
+      "file": "coin_burst.mp3",
+      "duration": 0.7346
+    },
+    "upgrade_buy": {
+      "file": "upgrade_buy.mp3",
+      "duration": 0.905
+    },
+    "gift_collect": {
+      "file": "gift_collect.mp3",
+      "duration": 0.5595
+    },
+    "star_1": {
+      "file": "star_1.mp3",
+      "duration": 0.53
+    },
+    "star_2": {
+      "file": "star_2.mp3",
+      "duration": 0.53
+    },
+    "star_3": {
+      "file": "star_3.mp3",
+      "duration": 0.53
+    },
+    "whoosh": {
+      "file": "whoosh.mp3",
+      "duration": 0.35
+    },
+    "unlock": {
+      "file": "unlock.mp3",
+      "duration": 1.155
+    }
+  }
+}

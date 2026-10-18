@@ -1,0 +1,57 @@
+{
+ "name": "bgm_forest",
+ "bpm": 124,
+ "bars": 32,
+ "samples": 2731355,
+ "duration": 61.93548752834467,
+ "lufs_wav": -17.6,
+ "tp_wav": -2.93,
+ "stems": {
+  "flute": {
+   "stem_lufs_raw": -23.6,
+   "gain_db": 3.6
+  },
+  "whistle": {
+   "stem_lufs_raw": -26.5,
+   "gain_db": -3.5
+  },
+  "pizz": {
+   "stem_lufs_raw": -30.1,
+   "gain_db": 2.6
+  },
+  "marimba": {
+   "stem_lufs_raw": -29.8,
+   "gain_db": 2.8
+  },
+  "glock": {
+   "stem_lufs_raw": -43.2,
+   "gain_db": 11.2
+  },
+  "guitar": {
+   "stem_lufs_raw": -30.5,
+   "gain_db": -1.0
+  },
+  "strings": {
+   "stem_lufs_raw": -31.8,
+   "gain_db": -0.7
+  },
+  "bass": {
+   "stem_lufs_raw": -29.2,
+   "gain_db": 2.2
+  },
+  "drums": {
+   "stem_lufs_raw": -32.0,
+   "gain_db": 4.5
+  },
+  "_auto_eq": {
+   "125": 1.0,
+   "250": 0.64,
+   "500": 0.67,
+   "1000": -1.85,
+   "2000": 0.54,
+   "4000": 1.5,
+   "8000": 1.5
+  }
+ },
+ "secs": 35.6
+}

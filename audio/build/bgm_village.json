@@ -1,0 +1,57 @@
+{
+ "name": "bgm_village",
+ "bpm": 120,
+ "bars": 32,
+ "samples": 2822400,
+ "duration": 64.0,
+ "lufs_wav": -17.6,
+ "tp_wav": -3.96,
+ "stems": {
+  "accordion": {
+   "stem_lufs_raw": -30.0,
+   "gain_db": 9.5
+  },
+  "clarinet": {
+   "stem_lufs_raw": -25.5,
+   "gain_db": 4.5
+  },
+  "harmonica": {
+   "stem_lufs_raw": -28.6,
+   "gain_db": 8.6
+  },
+  "pizz": {
+   "stem_lufs_raw": -28.6,
+   "gain_db": 2.1
+  },
+  "mandolin": {
+   "stem_lufs_raw": -36.3,
+   "gain_db": 7.3
+  },
+  "glock": {
+   "stem_lufs_raw": -40.9,
+   "gain_db": 8.9
+  },
+  "tuba": {
+   "stem_lufs_raw": -29.4,
+   "gain_db": 4.4
+  },
+  "bass": {
+   "stem_lufs_raw": -29.3,
+   "gain_db": 2.3
+  },
+  "drums": {
+   "stem_lufs_raw": -32.5,
+   "gain_db": 5.5
+  },
+  "_auto_eq": {
+   "125": -0.4,
+   "250": 1.0,
+   "500": 1.33,
+   "1000": -0.78,
+   "2000": -2.33,
+   "4000": -2.24,
+   "8000": -0.22
+  }
+ },
+ "secs": 34.7
+}

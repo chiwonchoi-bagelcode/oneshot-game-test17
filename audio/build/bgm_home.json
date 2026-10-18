@@ -1,0 +1,57 @@
+{
+ "name": "bgm_home",
+ "bpm": 100,
+ "bars": 32,
+ "samples": 3386880,
+ "duration": 76.8,
+ "lufs_wav": -17.6,
+ "tp_wav": -3.97,
+ "stems": {
+  "flute": {
+   "stem_lufs_raw": -23.8,
+   "gain_db": 3.8
+  },
+  "clarinet": {
+   "stem_lufs_raw": -24.9,
+   "gain_db": 2.4
+  },
+  "glock": {
+   "stem_lufs_raw": -39.1,
+   "gain_db": 7.1
+  },
+  "ukulele": {
+   "stem_lufs_raw": -29.0,
+   "gain_db": 2.5
+  },
+  "marimba": {
+   "stem_lufs_raw": -33.2,
+   "gain_db": 5.7
+  },
+  "strings": {
+   "stem_lufs_raw": -28.3,
+   "gain_db": -4.2
+  },
+  "bass": {
+   "stem_lufs_raw": -29.4,
+   "gain_db": 2.4
+  },
+  "drums": {
+   "stem_lufs_raw": -36.2,
+   "gain_db": 6.7
+  },
+  "shaker": {
+   "stem_lufs_raw": -36.1,
+   "gain_db": 1.6
+  },
+  "_auto_eq": {
+   "125": 0.91,
+   "250": 1.0,
+   "500": 0.24,
+   "1000": -1.56,
+   "2000": -0.55,
+   "4000": 1.14,
+   "8000": 1.03
+  }
+ },
+ "secs": 41.4
+}

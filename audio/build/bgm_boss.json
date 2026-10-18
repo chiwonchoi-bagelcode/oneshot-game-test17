@@ -1,0 +1,65 @@
+{
+ "name": "bgm_boss",
+ "bpm": 140,
+ "bars": 36,
+ "samples": 2721597,
+ "duration": 61.71421768707483,
+ "lufs_wav": -17.6,
+ "tp_wav": -2.43,
+ "stems": {
+  "trumpet": {
+   "stem_lufs_raw": -30.0,
+   "gain_db": 10.0
+  },
+  "xylophone": {
+   "stem_lufs_raw": -42.8,
+   "gain_db": 16.8
+  },
+  "xylo_lead": {
+   "stem_lufs_raw": -39.5,
+   "gain_db": 18.5
+  },
+  "flute": {
+   "stem_lufs_raw": -34.4,
+   "gain_db": 9.4
+  },
+  "brass": {
+   "stem_lufs_raw": -33.0,
+   "gain_db": 7.0
+  },
+  "strings": {
+   "stem_lufs_raw": -32.1,
+   "gain_db": 6.1
+  },
+  "pizz": {
+   "stem_lufs_raw": -26.8,
+   "gain_db": -1.2
+  },
+  "horns": {
+   "stem_lufs_raw": -29.5,
+   "gain_db": 0.5
+  },
+  "timpani": {
+   "stem_lufs_raw": -34.8,
+   "gain_db": 6.3
+  },
+  "bass": {
+   "stem_lufs_raw": -29.4,
+   "gain_db": 2.9
+  },
+  "drums": {
+   "stem_lufs_raw": -31.6,
+   "gain_db": 5.6
+  },
+  "_auto_eq": {
+   "125": 1.0,
+   "250": 1.0,
+   "500": 0.7,
+   "1000": -0.45,
+   "2000": -1.28,
+   "4000": -0.64,
+   "8000": 1.5
+  }
+ },
+ "secs": 41.1
+}
