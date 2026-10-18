@@ -64,4 +64,4 @@ export function simulateStage(level: LevelDef, meta: MetaPower, profile: BotProf
   };
 }
 
-export const ZERO_META: MetaPower = { upgrades: { power: 0, range: 0, health: 0, pressure: 0, splash: 0 }, bonds: {}, assist: false };
+export const ZERO_META: MetaPower = { upgrades: { power: 0, range: 0, health: 0, pressure: 0, splash: 0 }, bonds: {}, assist: 0 };

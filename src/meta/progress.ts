@@ -1,7 +1,7 @@
 // Permanent progression: rewards after a run, upgrades, animal bonds, feature
 // unlocks, daily tasks, the daily challenge, login stamps and shelter gifts.
 import {
-  ASSIST, BOND_THRESHOLDS, DAILY, DECOR, GIFTS, MISSIONS, MISSIONS_PER_DAY, MISSION_ALL_BONUS, REWARDS, SPECIES, STAGE_COUNT,
+  ASSIST, BOND_THRESHOLDS, assistLevel, DAILY, DECOR, GIFTS, MISSIONS, MISSIONS_PER_DAY, MISSION_ALL_BONUS, REWARDS, SPECIES, STAGE_COUNT,
   STREAK_AFTER_WEEK, STREAK_REWARDS, UNLOCKS, UPGRADES, bondLevel, gunTierFor, upgradeCost, type SpeciesId, type UpgradeId,
 } from '../config/balance';
 import { Rng, hashString } from '../sim/rng';
@@ -18,7 +18,7 @@ export function bonds(): Partial<Record<SpeciesId, number>> {
   return out;
 }
 
-export function metaPower(assist = false): MetaPower {
+export function metaPower(assist = 0): MetaPower {
   return { upgrades: { ...save().upgrades }, bonds: bonds(), assist };
 }
 
@@ -33,10 +33,13 @@ export function stageUnlocked(stage: number): boolean { return stage === 1 || is
 export function nextStage(): number { return Math.min(STAGE_COUNT, highestCleared() + 1); }
 export function clearedCount(): number { let n = 0; for (let s = 1; s <= STAGE_COUNT; s++) if (isCleared(s)) n++; return n; }
 
-export function assistOffered(stage: number): boolean {
+export function assistFor(stage: number): number {
   const a = save().attempts[`s${stage}`];
-  return !!a && a.failsInRow >= ASSIST.failsBeforeHelp && !isCleared(stage);
+  if (!a || isCleared(stage)) return 0;
+  return assistLevel(a.failsInRow);
 }
+export function assistOffered(stage: number): boolean { return assistFor(stage) > 0; }
+void ASSIST;
 
 // ---------------------------------------------------------------- unlocks
 export type Feature = 'upgrades' | 'shelter' | 'missions' | 'daily' | 'decor';

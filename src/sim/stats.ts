@@ -30,10 +30,10 @@ export function computeStats(meta: MetaPower, skills: SkillStacks, cheer: number
   const sk = (id: keyof SkillStacks) => skills[id] || 0;
 
   const dmgMul = (1 + per('power') * (up.power || 0)) * T.dmg * (1 + bondBonus(meta, 'damage'))
-    * (1 + SKILL_VALUES.thickDmg * sk('thick')) * (meta.assist ? 1 + ASSIST.helpDamage : 1);
+    * (1 + SKILL_VALUES.thickDmg * sk('thick')) * (1 + ASSIST.helpDamage * (meta.assist || 0));
   const cheerMul = 1 + RESCUE.cheerDamagePerAnimal * Math.min(cheer, RESCUE.cheerMaxAnimals);
   const hpMul = (1 + per('health') * (up.health || 0)) * (1 + bondBonus(meta, 'maxHp'))
-    * (1 + SKILL_VALUES.vitalityHp * sk('vitality')) * (meta.assist ? 1 + ASSIST.helpHp : 1);
+    * (1 + SKILL_VALUES.vitalityHp * sk('vitality')) * (1 + ASSIST.helpHp * (meta.assist || 0));
   const rangeMul = (1 + per('range') * (up.range || 0)) * (1 + bondBonus(meta, 'range')) * (1 + SKILL_VALUES.rangeAdd * sk('range'));
   const splashMul = (1 + per('splash') * (up.splash || 0)) * T.splash * (1 + bondBonus(meta, 'splash'));
   const shield = sk('shield');

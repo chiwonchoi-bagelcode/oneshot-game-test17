@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Splash Rescue · Level Editor</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px system-ui, sans-serif; background: #22262b; color: #eee; height: 100vh; display: grid; grid-template-columns: 250px 1fr 300px; grid-template-rows: 48px 1fr; }
+  header { grid-column: 1 / 4; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: #2f353c; border-bottom: 1px solid #444; }
+  header h1 { font-size: 16px; margin: 0 12px 0 0; }
+  header button, header label.file { background: #3d8ee8; color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; font: 600 13px system-ui; cursor: pointer; }
+  header button.alt { background: #555; }
+  header button.go { background: #49a33a; }
+  header .grow { flex: 1; }
+  header input[type=file] { display: none; }
+  aside { overflow: auto; padding: 10px; background: #2a2f35; }
+  #levels { display: flex; flex-direction: column; gap: 3px; }
+  .lv { text-align: left; background: #343a41; color: #ddd; border: 0; border-radius: 6px; padding: 6px 8px; cursor: pointer; }
+  .lv.on { background: #3d8ee8; color: #fff; }
+  .lv small { color: #aab; }
+  main { display: grid; grid-template-rows: auto auto 1fr; gap: 8px; padding: 10px; overflow: hidden; }
+  #rooms { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tab { background: #3a4048; color: #ddd; border: 0; border-radius: 6px 6px 0 0; padding: 6px 12px; cursor: pointer; }
+  .tab.on { background: #4d7a35; color: #fff; }
+  .tab.add { background: #2f5f2a; } .tab.del { background: #6a2b2b; }
+  #palette { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .tool { background: #3a4048; color: #ddd; border: 0; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  .tool.on { background: #ffcf3d; color: #222; }
+  .sub { width: 100%; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  .chip { display: flex; align-items: center; gap: 4px; background: #343a41; color: #ddd; border: 1px solid #555; border-radius: 6px; padding: 2px 8px 2px 2px; cursor: pointer; font-size: 12px; }
+  .chip.on { border-color: #ffcf3d; background: #4a4220; }
+  .stage { overflow: auto; display: flex; justify-content: center; align-items: flex-start; }
+  canvas#room { height: calc(100vh - 170px); aspect-ratio: 576 / 960; border-radius: 8px; box-shadow: 0 0 0 2px #555; cursor: crosshair; touch-action: none; }
+  #props h3 { margin: 6px 0; font-size: 14px; color: #ffcf3d; }
+  .f { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 6px; align-items: center; margin: 3px 0; }
+  .f input:not([type=checkbox]), .f select { width: 100%; }
+  .f input, .f select { background: #1d2126; color: #eee; border: 1px solid #555; border-radius: 4px; padding: 4px; }
+  .hint { color: #aab; line-height: 1.4; }
+  #issues { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+  #issues .error { color: #ff8a8a; } #issues .warn { color: #ffd27a; } #issues .ok { color: #9ee08a; } #issues .run { color: #8ac8ff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Splash Rescue · Level Editor</h1>
+  <button id="validate">Validate</button>
+  <button id="test" class="go">Test play</button>
+  <span class="grow"></span>
+  <button id="newStage" class="alt">New stage</button>
+  <label class="file">Import JSON<input id="import" type="file" accept=".json,application/json"></label>
+  <button id="export">Export stage</button>
+  <button id="exportAll" class="alt">Export all</button>
+  <button id="reset" class="alt">Reset edits</button>
+</header>
+<aside><div id="levels"></div></aside>
+<main>
+  <div id="rooms"></div>
+  <div id="palette"></div>
+  <div class="stage"><canvas id="room"></canvas></div>
+</main>
+<aside><div id="props"></div><h3 style="color:#ffcf3d;margin:14px 0 4px">Checks</h3><div id="issues"></div></aside>
+<script src="assets/editor.js"></script>
+</body>
+</html>

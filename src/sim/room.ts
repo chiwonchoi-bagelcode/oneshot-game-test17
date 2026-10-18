@@ -95,8 +95,8 @@ export class RoomSim {
     const hp = base.hp * sc.hp * mods.monsterHp * (big > 1 ? 1.6 : 1);
     const m: Monster = {
       id: this.nextId++, kind, x, y, vx: 0, vy: 0, r: base.r * big, hp, maxHp: hp,
-      speed: base.speed * mods.monsterSpeed * (big > 1 ? 0.8 : 1), contact: base.contact * sc.dmg * mods.monsterDmg,
-      state: 0, timer: this.rng.range(0, 0.4), cd: (base.cooldown ?? 2) * this.rng.range(0.5, 1.0),
+      speed: base.speed * sc.speed * mods.monsterSpeed * (big > 1 ? 0.8 : 1), contact: base.contact * sc.dmg * mods.monsterDmg,
+      state: 0, timer: this.rng.range(0, 0.4), cd: (base.cooldown ?? 2) * this.rng.range(0.5, 1.0) / sc.tempo,
       rise, tx: x, ty: y, alive: true, boss: kind === 'boss', parent, hitTime: 99, phase: 0, pattern: 0,
       airborne: kind === 'flyer', wave, variant,
     };
@@ -549,7 +549,7 @@ export class RoomSim {
 
   private fireBullet(m: Monster, ang: number, speedMul = 1) {
     const base = MONSTERS[m.kind]; const sc = runScale(this.run);
-    const sp = (base.bulletSpeed ?? 200) * speedMul * this.run.mods.bulletSpeed;
+    const sp = (base.bulletSpeed ?? 200) * speedMul * this.run.mods.bulletSpeed * sc.bullet;
     const r = base.bulletR ?? 13;
     this.bullets.push({
       x: m.x + Math.cos(ang) * (m.r * 0.8), y: m.y + Math.sin(ang) * (m.r * 0.8) - 6,
@@ -581,7 +581,7 @@ export class RoomSim {
         if (m.variant === 1) { this.fireBullet(m, a - 0.26); this.fireBullet(m, a); this.fireBullet(m, a + 0.26); }
         else this.fireBullet(m, a);
         this.emit({ t: 'spit', x: m.x, y: m.y, kind: m.kind });
-        m.state = 0; m.cd = base.cooldown! * this.rng.range(0.85, 1.15);
+        m.state = 0; m.cd = (base.cooldown! * this.rng.range(0.85, 1.15)) / runScale(this.run).tempo;
       }
     }
   }
@@ -625,7 +625,7 @@ export class RoomSim {
         const off = this.rng.range(0, TAU);
         for (let i = 0; i < n; i++) this.fireBullet(m, off + (i / n) * TAU, 0.9);
         this.emit({ t: 'spit', x: m.x, y: m.y, kind: m.kind });
-        m.state = 0; m.cd = base.cooldown! * this.rng.range(0.9, 1.1);
+        m.state = 0; m.cd = (base.cooldown! * this.rng.range(0.9, 1.1)) / runScale(this.run).tempo;
       }
     }
   }
@@ -684,7 +684,7 @@ export class RoomSim {
       }
     } else {
       m.timer -= dt; m.vx = 0; m.vy = 0;
-      if (m.timer <= 0) { m.state = 0; m.cd = base.cooldown! * this.rng.range(0.85, 1.2); }
+      if (m.timer <= 0) { m.state = 0; m.cd = (base.cooldown! * this.rng.range(0.85, 1.2)) / runScale(this.run).tempo; }
     }
   }
 
@@ -700,7 +700,7 @@ export class RoomSim {
     if (m.cd <= 0 && this.state === 'fight' && d < 480) {
       this.fireBullet(m, this.aimAt(m), 1);
       this.emit({ t: 'spit', x: m.x, y: m.y, kind: m.kind });
-      m.cd = base.cooldown! * this.rng.range(0.8, 1.2);
+      m.cd = (base.cooldown! * this.rng.range(0.8, 1.2)) / runScale(this.run).tempo;
     }
   }
 
@@ -793,11 +793,6 @@ export class RoomSim {
       const dx = b.x - p.x, dy = b.y - (p.y - 6);
       if (dx * dx + dy * dy < rr * rr && this.state === 'fight') {
         if (p.invuln <= 0) { b.alive = false; this.hurtPlayer(b.dmg, b.src, b.x - b.vx * 0.05, b.y - b.vy * 0.05); }
-      }
-      // the water stream knocks droplets out of the air
-      for (const s of this.segs) {
-        if (s.kind === 2) continue;
-        if (distToSeg(b.x, b.y, s.x0, s.y0, s.x1, s.y1) < s.w * 0.5 + b.r * 0.5) { b.alive = false; break; }
       }
     }
     if (this.bullets.length > 64) this.bullets = this.bullets.filter((b) => b.alive);
@@ -938,7 +933,7 @@ function turnToward(a: number, b: number, max: number): number {
   return a + Math.sign(d) * max;
 }
 
-function distToSeg(px: number, py: number, x0: number, y0: number, x1: number, y1: number): number {
+export function distToSeg(px: number, py: number, x0: number, y0: number, x1: number, y1: number): number {
   const dx = x1 - x0, dy = y1 - y0; const l2 = dx * dx + dy * dy;
   let t = l2 > 0 ? ((px - x0) * dx + (py - y0) * dy) / l2 : 0; t = clamp(t, 0, 1);
   return Math.hypot(px - (x0 + dx * t), py - (y0 + dy * t));

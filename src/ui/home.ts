@@ -7,7 +7,7 @@ import { screen } from '../engine/screen';
 import { t, num, pct } from '../i18n';
 import {
   bondProgress, buyDecor, collectGifts, featureOpen, featureUpgradeOpen, giftRate, giftsPending, highestCleared, isCleared,
-  missionsClaimable, nextStage, stageUnlocked, upgradeInfo, assistOffered, bonds,
+  missionsClaimable, nextStage, stageUnlocked, upgradeInfo, assistFor, bonds,
 } from '../meta/progress';
 import { save } from '../meta/save';
 import { MapView, regionOf } from '../render/mapView';
@@ -202,7 +202,7 @@ export class HomeScreen {
       h('div', { class: 'st-sub' }, t('stage.animals')), animals,
       lv.intro && lv.intro !== 'blob' ? h('div', { class: 'st-goo' }, icon(lv.intro === 'boss' ? `m_boss_${lv.region}_normal` : lv.intro === 'flyer' ? 'm_flyer_normal_0' : `m_${lv.intro}_normal`, 52), h('div', {}, h('div', { class: 'st-goo-t' }, lv.intro === 'boss' ? t('stage.boss') : t('stage.newGoo')), h('div', { class: 'st-goo-n' }, t(`monster.${lv.intro}`)))) : null,
       c ? h('div', { class: 'st-best' }, stars, h('span', {}, `${t('stage.cleared')} · ${t('stage.best')} ${Math.floor(c.best / 60)}:${String(c.best % 60).padStart(2, '0')}`)) : null,
-      assistOffered(stage) ? h('div', { class: 'st-assist' }, icon('ic_heart', 30), h('span', {}, t('stage.helpOffer'))) : null,
+      assistFor(stage) ? h('div', { class: 'st-assist' }, icon('ic_heart', 30), h('span', {}, t('stage.helpOffer', { hp: assistFor(stage) * 30, dmg: assistFor(stage) * 20 }))) : null,
       unlocked
         ? h('button', { class: 'btn btn-primary big', onclick: once(() => { closeModal('stage', true); this.api.play(stage); }) }, icon('ic_play', 32), t('stage.play'))
         : h('div', { class: 'st-locked' }, icon('ic_lock', 30), t('stage.locked')),

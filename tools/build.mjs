@@ -2,7 +2,7 @@
 // atlases and audio, writes out/index.html (release) and out/dev.html (with
 // the debug panel). Usage: node tools/build.mjs [--skip-fonts]
 import { build } from 'esbuild';
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, existsSync, statSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -10,6 +10,7 @@ const OUT = 'out';
 const args = new Set(process.argv.slice(2));
 mkdirSync(`${OUT}/assets/art`, { recursive: true });
 mkdirSync(`${OUT}/assets/fonts`, { recursive: true });
+rmSync(`${OUT}/assets/audio`, { recursive: true, force: true });
 mkdirSync(`${OUT}/assets/audio`, { recursive: true });
 mkdirSync(`${OUT}/release`, { recursive: true });
 
@@ -33,7 +34,12 @@ async function bundle(dev) {
     define: { __DEV__: dev ? 'true' : 'false' }, plugins: [levelsPlugin], logLevel: 'warning', legalComments: 'none',
   });
 }
-await Promise.all([bundle(false), bundle(true)]);
+await Promise.all([bundle(false), bundle(true), build({
+  entryPoints: ['editor/main.ts'], bundle: true, format: 'iife', target: ['es2020'], outfile: `${OUT}/assets/editor.js`, minify: true,
+  define: { __DEV__: 'true' }, plugins: [levelsPlugin], logLevel: 'warning', legalComments: 'none',
+})]);
+copyFileSync('editor/editor.html', `${OUT}/editor.html`);
+if (existsSync('data/balance/profile.json')) copyFileSync('data/balance/profile.json', `${OUT}/profile.json`);
 
 // atlases
 for (const f of readdirSync('assets/art')) if (f.endsWith('.png')) copyFileSync(`assets/art/${f}`, `${OUT}/assets/art/${f}`);
@@ -55,8 +61,12 @@ if (existsSync('audio/out/manifest.json')) {
   for (const [name, d] of Object.entries(man.sfx || {})) {
     const p = `audio/out/${d.file}`; if (existsSync(p)) sfx[name] = readFileSync(p).toString('base64');
   }
-  for (const d of Object.values(man.music || {})) { const p = `audio/out/${d.file}`; if (existsSync(p)) copyFileSync(p, `${OUT}/assets/audio/${d.file}`); }
-  for (const [name, d] of Object.entries(man.stingers || {})) { const p = `audio/out/${d.file}`; if (existsSync(p)) { sfx[name] = readFileSync(p).toString('base64'); man.sfx[name] = d; } }
+  // looping tracks stream from files; one-shot stingers are embedded with the effects
+  for (const [name, d] of Object.entries(man.music || {})) {
+    const p = `audio/out/${d.file}`; if (!existsSync(p)) continue;
+    if (d.loop === false) { sfx[name] = readFileSync(p).toString('base64'); man.sfx[name] = d; delete man.music[name]; }
+    else copyFileSync(p, `${OUT}/assets/audio/${d.file}`);
+  }
   audioScript = `window.__AUDIO_MANIFEST__=${JSON.stringify(man)};window.__SFX__=${JSON.stringify(sfx)};`;
 }
 writeFileSync(`${OUT}/assets/sfx.js`, audioScript);

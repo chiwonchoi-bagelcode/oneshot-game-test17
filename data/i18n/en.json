@@ -36,7 +36,7 @@
  "skill.thick.name": "Thick Stream",
  "skill.thick.desc": "Stream damage +22%, width +15%",
  "skill.range.name": "Long Reach",
- "skill.range.desc": "Reach +18%",
+ "skill.range.desc": "Reach +15%",
  "skill.multi.name": "Split Stream",
  "skill.multi.desc": "An extra stream washes another goo (55% damage)",
  "skill.pierce.name": "Piercing Stream",
@@ -105,7 +105,7 @@
  "upgrade.power.name": "Stream Power",
  "upgrade.power.desc": "Damage +12%, width +5% per level",
  "upgrade.range.name": "Reach",
- "upgrade.range.desc": "Reach +5% per level",
+ "upgrade.range.desc": "Reach +4% per level",
  "upgrade.health.name": "Health",
  "upgrade.health.desc": "Max HP +10% per level",
  "upgrade.pressure.name": "Pressure",
@@ -141,8 +141,7 @@
  "stage.boss": "Boss",
  "stage.newGoo": "New goo",
  "stage.locked": "Clean the previous area first",
- "stage.help": "Helper on: this run +30% HP, +20% damage",
- "stage.helpOffer": "Your friends came to cheer! This run: +30% HP, +20% damage",
+ "stage.helpOffer": "This run: +{hp}% HP, +{dmg}% damage",
  "map.title": "Map",
  "map.progress": "{a}/{b} cleaned",
  "nav.upgrade": "Upgrades",
@@ -289,5 +288,6 @@
  "settings.version": "Version {v}",
  "time.hm": "{h}h {m}m",
  "time.m": "{m}m",
- "coins.n": "{n}"
+ "coins.n": "{n}",
+ "stage.helpTitle": "Your friends came to cheer!"
 }

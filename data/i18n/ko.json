@@ -36,7 +36,7 @@
  "skill.thick.name": "굵은 물줄기",
  "skill.thick.desc": "물줄기 피해 +22%, 굵기 +15%",
  "skill.range.name": "멀리 쏘기",
- "skill.range.desc": "사거리 +18%",
+ "skill.range.desc": "사거리 +15%",
  "skill.multi.name": "갈래 물줄기",
  "skill.multi.desc": "물줄기가 하나 더 나와 다른 끈적이를 씻어요 (피해 55%)",
  "skill.pierce.name": "뚫는 물줄기",
@@ -105,7 +105,7 @@
  "upgrade.power.name": "물줄기 세기",
  "upgrade.power.desc": "피해 +12%, 굵기 +5% (레벨마다)",
  "upgrade.range.name": "사거리",
- "upgrade.range.desc": "사거리 +5% (레벨마다)",
+ "upgrade.range.desc": "레벨마다 사거리 +4%",
  "upgrade.health.name": "체력",
  "upgrade.health.desc": "최대 체력 +10% (레벨마다)",
  "upgrade.pressure.name": "수압",
@@ -141,8 +141,7 @@
  "stage.boss": "보스",
  "stage.newGoo": "새 끈적이",
  "stage.locked": "앞 구역을 먼저 정화해요",
- "stage.help": "도움 받기: 이번 판은 체력 +30%, 피해 +20%",
- "stage.helpOffer": "친구들이 응원하러 왔어요! 이번 판 체력 +30%, 피해 +20%",
+ "stage.helpOffer": "이번 판 체력 +{hp}%, 피해 +{dmg}%",
  "map.title": "지도",
  "map.progress": "{a}/{b} 정화",
  "nav.upgrade": "강화",
@@ -289,5 +288,6 @@
  "settings.version": "버전 {v}",
  "time.hm": "{h}시간 {m}분",
  "time.m": "{m}분",
- "coins.n": "{n}"
+ "coins.n": "{n}",
+ "stage.helpTitle": "친구들이 응원하러 왔어요!"
 }

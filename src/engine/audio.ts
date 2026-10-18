@@ -16,11 +16,11 @@ class AudioManager {
   ctx: AudioContext | null = null;
   private sfxGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
-  private buffers = new Map<string, AudioBuffer>();
+  buffers = new Map<string, AudioBuffer>();
   private playing = new Map<string, { n: number; last: number }>();
   private loopNodes = new Map<string, { src: AudioBufferSourceNode; gain: GainNode }>();
   private manifest: AudioManifest | null = null;
-  private music: { name: string; el: HTMLAudioElement; node?: MediaElementAudioSourceNode; gain?: GainNode } | null = null;
+  music: { name: string; el: HTMLAudioElement; node?: MediaElementAudioSourceNode; gain?: GainNode } | null = null;
   private fading: HTMLAudioElement[] = [];
   musicVol = 0.7; sfxVol = 0.9;
   private wantMusic: string | null = null;
@@ -200,3 +200,6 @@ class AudioManager {
 }
 
 export const audio = new AudioManager();
+if (typeof __DEV__ !== 'undefined' && __DEV__) (window as unknown as { __AUDIO__: AudioManager }).__AUDIO__ = audio;
+
+export function audioDebug() { return audio; }

@@ -17,7 +17,7 @@ export const PLAYER = {
   gooSlow: 0.62, // speed multiplier while standing on goo
   invuln: 0.9,
   dps: 34,
-  range: 250,
+  range: 235,
   streamWidth: 12,
   streamSpeed: 2600, // how fast a fresh stream reaches its target
   fireDelay: 0.05, // seconds after stopping before water comes out
@@ -75,7 +75,7 @@ export const MONSTERS: Record<MonsterKind, MonsterStats> = {
   nest: { r: 40, hp: 240, speed: 0, contact: 10, xp: 8, coins: 8, cooldown: 4.2, telegraph: 0.7 },
   jumper: { r: 28, hp: 70, speed: 50, contact: 14, xp: 4, coins: 4, cooldown: 2.9, telegraph: 0.75, bulletDmg: 18 },
   flyer: { r: 22, hp: 44, speed: 95, contact: 11, xp: 3, coins: 3, cooldown: 3.2, telegraph: 0.5, bulletSpeed: 170, bulletDmg: 11, bulletR: 12 },
-  boss: { r: 78, hp: 1700, speed: 55, contact: 22, xp: 30, coins: 60, cooldown: 2.2, telegraph: 0.9, bulletSpeed: 200, bulletDmg: 15, bulletR: 15 },
+  boss: { r: 78, hp: 1250, speed: 55, contact: 18, xp: 30, coins: 60, cooldown: 2.2, telegraph: 0.9, bulletSpeed: 200, bulletDmg: 15, bulletR: 15 },
 };
 
 export const MONSTER_RULES = {
@@ -98,16 +98,19 @@ export const STAGE_COUNT = 30;
 // Difficulty and reward scaling per stage (1-based). Tuned with tools/sim-balance.
 export function stageScale(stage: number) {
   const s = Math.max(1, stage) - 1;
-  const hp = 0.62 * Math.pow(1.092, s) * (1 + 0.015 * s);
-  const dmg = 0.5 + 0.06 * s + 0.0012 * s * s;
-  const coin = 1 + 0.12 * s;
-  return { hp, dmg, coin };
+  const hp = 0.62 * (1 + 0.3 * s + 0.024 * s * s);
+  const dmg = 0.6 + 0.22 * s + 0.0028 * s * s;
+  const coin = 1 + 0.06 * s;
+  const speed = 1 + 0.009 * s; // monsters move a bit faster later
+  const tempo = 1 + 0.022 * s; // attack cooldowns get shorter later
+  const bullet = 1 + 0.012 * s;
+  return { hp, dmg, coin, speed, tempo, bullet };
 }
 
 export const REWARDS = {
   roomClearCoins: 6, // times coin scale
-  stageFirstClear: (stage: number) => 60 + 25 * stage,
-  stageReplayClear: (stage: number) => 20 + 6 * stage,
+  stageFirstClear: (stage: number) => 50 + 12 * stage,
+  stageReplayClear: (stage: number) => 15 + 4 * stage,
   starCoins: 30,
   coinDropSpread: 0.25,
   healDropChance: 0.06, // chance a washed monster drops a heart-shaped water drop
@@ -122,11 +125,11 @@ export interface UpgradeDef {
 
 // per = effect per level as a fraction (0.12 = +12%)
 export const UPGRADES: UpgradeDef[] = [
-  { id: 'power', max: 40, base: 40, growth: 1.2, per: 0.12 },
-  { id: 'range', max: 20, base: 50, growth: 1.24, per: 0.05 },
-  { id: 'health', max: 30, base: 40, growth: 1.2, per: 0.1 },
-  { id: 'pressure', max: 15, base: 70, growth: 1.3, per: 0.05 },
-  { id: 'splash', max: 20, base: 60, growth: 1.27, per: 0.1 },
+  { id: 'power', max: 40, base: 45, growth: 1.25, per: 0.12 },
+  { id: 'range', max: 15, base: 50, growth: 1.28, per: 0.04 },
+  { id: 'health', max: 30, base: 45, growth: 1.25, per: 0.1 },
+  { id: 'pressure', max: 15, base: 70, growth: 1.32, per: 0.05 },
+  { id: 'splash', max: 20, base: 60, growth: 1.3, per: 0.1 },
 ];
 
 export function niceRound(v: number): number {
@@ -143,12 +146,12 @@ export function upgradeCost(def: UpgradeDef, level: number): number {
 // The water gun evolves as the total of all upgrade levels grows.
 export const GUN_TIERS = [
   { at: 0, dmg: 1.0, width: 1.0, splash: 1.0, range: 0 },
-  { at: 3, dmg: 1.12, width: 1.32, splash: 1.15, range: 10 },
-  { at: 8, dmg: 1.25, width: 1.62, splash: 1.3, range: 20 },
-  { at: 15, dmg: 1.42, width: 1.95, splash: 1.5, range: 35 },
-  { at: 25, dmg: 1.62, width: 2.35, splash: 1.72, range: 50 },
-  { at: 38, dmg: 1.85, width: 2.8, splash: 1.95, range: 70 },
-  { at: 55, dmg: 2.15, width: 3.5, splash: 2.3, range: 100 },
+  { at: 3, dmg: 1.12, width: 1.32, splash: 1.15, range: 8 },
+  { at: 8, dmg: 1.25, width: 1.62, splash: 1.3, range: 16 },
+  { at: 15, dmg: 1.42, width: 1.95, splash: 1.5, range: 24 },
+  { at: 25, dmg: 1.62, width: 2.35, splash: 1.72, range: 32 },
+  { at: 38, dmg: 1.85, width: 2.8, splash: 1.95, range: 40 },
+  { at: 55, dmg: 2.15, width: 3.5, splash: 2.3, range: 50 },
 ];
 
 export function gunTierFor(totalLevels: number): number {
@@ -182,7 +185,7 @@ export const SKILLS: SkillDef[] = [
 
 export const SKILL_VALUES = {
   thickDmg: 0.22, thickWidth: 0.15,
-  rangeAdd: 0.18,
+  rangeAdd: 0.15,
   multiDmg: 0.55,
   pierceDmg: 0.7,
   chainDmg: 0.5, chainRange: 150,
@@ -304,8 +307,15 @@ export const DAILY = {
 };
 
 export const ASSIST = {
-  // after this many failed attempts in a row on a stage, offer a helper boost
+  // after this many failed attempts in a row on a stage, friends come to cheer:
+  // the boost grows with each further fail, up to maxLevel
   failsBeforeHelp: 2,
-  helpHp: 0.3,
-  helpDamage: 0.2,
+  helpHp: 0.3, // per level
+  helpDamage: 0.2, // per level
+  maxLevel: 3,
 };
+
+export function assistLevel(failsInRow: number): number {
+  if (failsInRow < ASSIST.failsBeforeHelp) return 0;
+  return Math.min(ASSIST.maxLevel, failsInRow - ASSIST.failsBeforeHelp + 1);
+}

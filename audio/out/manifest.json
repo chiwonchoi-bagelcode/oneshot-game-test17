@@ -113,19 +113,19 @@
     },
     "goo_burst_1": {
       "file": "goo_burst_1.mp3",
-      "duration": 0.3695
+      "duration": 0.37
     },
     "goo_burst_2": {
       "file": "goo_burst_2.mp3",
-      "duration": 0.3677
+      "duration": 0.3901
     },
     "goo_burst_3": {
       "file": "goo_burst_3.mp3",
-      "duration": 0.3782
+      "duration": 0.3902
     },
     "goo_burst_big": {
       "file": "goo_burst_big.mp3",
-      "duration": 1.02
+      "duration": 1.0217
     },
     "goo_split": {
       "file": "goo_split.mp3",

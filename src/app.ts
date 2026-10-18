@@ -7,7 +7,7 @@ import { screen, onResize } from './engine/screen';
 import { onLangChange, t } from './i18n';
 import { PlayScreen, type PlayOutcome } from './game/play';
 import {
-  applyRun, assistOffered, dailyChallenge, featureOpen, knownSpecies, markAnnounced, metaPower, nextStage, pendingUnlocks, refreshDay, type RunSummary,
+  applyRun, assistFor, dailyChallenge, featureOpen, knownSpecies, markAnnounced, metaPower, nextStage, pendingUnlocks, refreshDay, type RunSummary,
 } from './meta/progress';
 import { flush, markDirty, save, today } from './meta/save';
 import { BOT_EXPERT, BOT_NOVICE, BOT_PLAYER } from './sim/bot';
@@ -47,7 +47,10 @@ export class App {
   start() {
     refreshDay();
     const stage = this.params.get('stage');
-    if (stage) this.playStage(Number(stage));
+    if (__DEV__ && this.params.has('editor')) {
+      // test play from the level editor (dev build only)
+      try { const d = JSON.parse(localStorage.getItem('splash-editor-test') || 'null'); if (d) { const lv = d.level as LevelDef; if (d.room) lv.rooms = lv.rooms.slice(d.room).concat(lv.rooms.slice(0, d.room)); this.startRun(lv, null); } } catch { this.goHome('map'); }
+    } else if (stage) this.playStage(Number(stage));
     else if (this.params.has('home')) this.goHome((this.params.get('home') || 'map') as Tab);
     else this.showTitle();
     if (this.capture) {
@@ -170,8 +173,8 @@ export class App {
     const bot = botName === 'expert' ? BOT_EXPERT : botName === 'novice' ? BOT_NOVICE : botName ? BOT_PLAYER : undefined;
     const seed = Number(this.params.get('seed') || Math.floor(Math.random() * 1e6));
     const s = save();
-    const assist = !daily && assistOffered(level.stage);
-    if (assist) track('assist_offer', { stage: level.stage, fails: s.attempts[`s${level.stage}`]?.failsInRow ?? 0 });
+    const assist = daily ? 0 : assistFor(level.stage);
+    if (assist) track('assist_offer', { stage: level.stage, fails: s.attempts[`s${level.stage}`]?.failsInRow ?? 0, level: assist });
     const attempt = (s.attempts[`s${level.stage}`]?.tries ?? 0) + 1;
     const play = new PlayScreen({
       level, meta: metaPower(assist), known: knownSpecies(), seed, attempt, tutorial: level.stage === 1 && s.stats.runs === 0 && !daily,
@@ -179,7 +182,7 @@ export class App {
       onSettings: () => openSettings(() => {}),
     }, this.ui, (r) => this.onPlayDone(play, r, !!daily, daily?.mod));
     this.setScene({ frame: (dt) => play.frame(dt), layout: () => play.layout(), destroy: () => play.destroy(), autoPause: () => play.autoPause() });
-    if (assist) setTimeout(() => play.announce(t('stage.helpOffer'), '', 'small'), 1200);
+    if (assist) setTimeout(() => play.announce(t('stage.helpTitle'), t('stage.helpOffer', { hp: Math.round(assist * 30), dmg: Math.round(assist * 20) }), 'small'), 1200);
   }
 
   private onPlayDone(play: PlayScreen, r: PlayOutcome, daily: boolean, mod?: string) {

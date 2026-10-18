@@ -18,8 +18,8 @@ export interface BotProfile {
 }
 
 export const BOT_EXPERT: BotProfile = { name: 'expert', reaction: 0.06, margin: 16, horizon: 0.7, greed: 0.0, mistakes: 0, rescue: true };
-export const BOT_PLAYER: BotProfile = { name: 'player', reaction: 0.16, margin: 8, horizon: 0.5, greed: 0.25, mistakes: 0.06, rescue: true };
-export const BOT_NOVICE: BotProfile = { name: 'novice', reaction: 0.26, margin: 2, horizon: 0.38, greed: 0.45, mistakes: 0.14, rescue: false };
+export const BOT_PLAYER: BotProfile = { name: 'player', reaction: 0.22, margin: 4, horizon: 0.45, greed: 0.35, mistakes: 0.08, rescue: true };
+export const BOT_NOVICE: BotProfile = { name: 'novice', reaction: 0.32, margin: 0, horizon: 0.35, greed: 0.5, mistakes: 0.15, rescue: false };
 
 const SKILL_PRIORITY: SkillId[] = ['thick', 'multi', 'splash', 'pierce', 'chain', 'turbo', 'vitality', 'shield', 'keep', 'range', 'speed', 'trail', 'magnet', 'heal'];
 

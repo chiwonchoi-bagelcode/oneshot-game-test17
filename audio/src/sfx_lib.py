@@ -196,9 +196,15 @@ def bubble_cloud(dur, count, fmin, fmax, rng, amp=(0.2, 1.0), xi=(0.05, 0.25), t
     return c.x
 
 
+def soft_peaks(x, k=3.0):
+    """Tame the random crest of a noise layer: tanh soft-clip at k x RMS (inaudible on noise)."""
+    r = np.sqrt(np.mean(x ** 2)) + 1e-12
+    return np.tanh(x / (k * r)) * (k * r)
+
+
 def splash(dur, rng, f_start=5000, f_end=1200, q=0.9, tau=0.09, attack=0.003, hp_fc=500):
     n = N(dur)
-    src = white(n, rng)
+    src = soft_peaks(white(n, rng), 2.5)
     fc = glide(f_start, f_end, dur, tau=dur * 0.35)
     y = svf(src, fc, q, "bp")
     y = hp(y, hp_fc)
@@ -399,7 +405,15 @@ def finalize(x, peak_db=-3.0, fade_in_ms=3.0, fade_out_ms=10.0, tail_db=-60.0, m
     x[len(x) - fo:] *= np.linspace(1, 0, fo)
     g = db2lin(peak_db) / (np.max(np.abs(x)) + 1e-12)
     if m100_target is not None:
-        g = min(g, db2lin(m100_target - m100(x)))
+        g_loud = db2lin(m100_target - m100(x))
+        if g_loud > g * 1.12:
+            # peak-limited: allow up to 3 dB of transparent look-ahead limiting on the transient
+            from music_lib import limiter
+            push = min(g_loud / g, db2lin(3.0))
+            x = limiter((x * g * push)[:, None], ceiling_db=peak_db, lookahead_ms=1.5, release_ms=40.0)[:, 0]
+            g = 1.0
+        else:
+            g = min(g, g_loud)
     return x * g
 
 

@@ -62,7 +62,7 @@ export interface PlayerStats {
 export interface MetaPower {
   upgrades: Record<UpgradeId, number>;
   bonds: Partial<Record<SpeciesId, number>>; // bond levels
-  assist: boolean;
+  assist: number; // 0 = none, 1..3 helper boost level after repeated fails
 }
 
 export type SkillStacks = Partial<Record<SkillId, number>>;
