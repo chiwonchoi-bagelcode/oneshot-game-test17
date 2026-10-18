@@ -6,7 +6,7 @@
 import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { simulateStage } from '../src/sim/playthrough';
 import { BOT_PLAYER, BOT_NOVICE, BOT_EXPERT } from '../src/sim/bot';
-import { REWARDS, UPGRADES, upgradeCost, bondLevel, SPECIES, GIFTS, STREAK_REWARDS, STAGE_COUNT, assistLevel, gunTierFor, type UpgradeId, type SpeciesId } from '../src/config/balance';
+import { FESTIVAL, REWARDS, UPGRADES, upgradeCost, bondLevel, SPECIES, GIFTS, STREAK_REWARDS, STAGE_COUNT, assistLevel, gunTierFor, type UpgradeId, type SpeciesId } from '../src/config/balance';
 import { upgradeTotal, computeStats } from '../src/sim/stats';
 import type { LevelDef, MetaPower } from '../src/sim/types';
 
@@ -62,7 +62,9 @@ while (highest() < STAGE_COUNT && run < 600) {
   tries[stage] = (tries[stage] || 0) + 1;
   const r = simulateStage(level, meta, prof, run * 31 + stage);
   time += r.time + 20; // + menus
-  let gain = r.coins;
+  // weekend festival: install weekday from START_DOW (default Monday = 1, the slowest case for the first week)
+  const dow = (Number(process.env.START_DOW ?? 1) + day - 1) % 7;
+  let gain = r.coins + (FESTIVAL.days.includes(dow) ? Math.round(r.coins * (FESTIVAL.coinMul - 1)) : 0);
   if (r.cleared) { gain += REWARDS.stageFirstClear(stage); cleared.add(stage); clearedAt[stage] = run; failsInRow = 0; clearProfile[stage] = { ...meta, upgrades: { ...meta.upgrades } }; }
   else { fails[stage] = (fails[stage] || 0) + 1; failsInRow++; }
   for (const sp of r.run.rescued) rescued[sp] = (rescued[sp] || 0) + 1;

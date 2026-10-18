@@ -11,7 +11,7 @@
   --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: #3f7a2a; color: var(--ink); font-family: var(--font); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none; }
+html, body { word-break: keep-all; overflow-wrap: break-word; margin: 0; height: 100%; overflow: hidden; background: #3f7a2a; color: var(--ink); font-family: var(--font); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none; }
 canvas#game { position: fixed; left: 0; top: 0; display: block; touch-action: none; }
 #ui, #modals { position: fixed; inset: 0; pointer-events: none; }
 #ui > *, #modals > * { pointer-events: auto; }
@@ -191,6 +191,10 @@ button { font-family: inherit; color: inherit; }
 /* shelter overlay */
 .sh-head { display: none; align-items: center; justify-content: center; gap: 8px; margin: 0 auto; padding: 4px 12px; height: 44px; min-width: 0; max-width: 100%; border-radius: 20px; border: 3px solid var(--ink); background: rgba(255, 250, 240, .96); box-shadow: 0 3px 0 rgba(58, 36, 22, .4); white-space: nowrap; overflow: hidden; }
 .sh-head.on { display: flex; }
+.fest-pill { display: none; align-items: center; gap: 6px; height: 48px; min-width: 0; max-width: 100%; margin: 0 auto; padding: 2px 14px 2px 8px; border-radius: 24px; border: 3px solid var(--ink); background: linear-gradient(#fff3b0, #ffd95a); box-shadow: 0 3px 0 rgba(58, 36, 22, .4); font-size: 15px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.fest-pill.on { display: flex; }
+.fest-pill > span:not(.ico) { overflow: hidden; text-overflow: ellipsis; }
+.fest-pill:active { transform: translateY(2px); }
 .sh-title { display: flex; align-items: center; gap: 4px; font-size: 18px; font-weight: 700; min-width: 0; }
 .sh-title > span:not(.ico) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sh-count { font-size: 15px; color: var(--ink2); flex: none; }
@@ -357,6 +361,7 @@ button { font-family: inherit; color: inherit; }
 .unlock, .evolve { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding-top: 18px; }
 .unlock-ic { animation: popIn .5s cubic-bezier(.3, 1.8, .5, 1); }
 .unlock-title { font-size: 25px; font-weight: 700; line-height: 1.2; }
+.fest-left { font-size: 17px; color: var(--ink2); margin: -4px 0 14px; }
 .evolve-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .evolve-old { opacity: .7; }
 .evolve-new { animation: popIn .6s cubic-bezier(.3, 1.8, .5, 1); filter: drop-shadow(0 0 12px rgba(120, 210, 255, .9)); }

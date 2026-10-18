@@ -13,7 +13,7 @@ export type EventName =
   | 'room_clear' // {stage, room, seconds, hit}
   | 'level_reached' // {stage} highest stage reached (first time)
   | 'stage_first_clear' // {stage, attempts}
-  | 'currency_earn' // {source: run|clear_bonus|gift|mission|daily|streak|debug, amount, balance}
+  | 'currency_earn' // {source: run|clear_bonus|festival|gift|mission|daily|streak|debug, amount, balance}
   | 'currency_spend' // {sink: upgrade|decor, item, amount, balance}
   | 'upgrade_buy' // {id, level, cost}
   | 'gun_evolve' // {tier}
@@ -27,6 +27,7 @@ export type EventName =
   | 'daily_start' // {mod}
   | 'daily_end' // {mod, result}
   | 'streak_claim' // {day, reward}
+  | 'festival_view' // weekend festival popup seen {remainingH}
   | 'feature_unlock' // {feature}
   | 'settings_change' // {key, value}
   | 'assist_offer' // {stage, fails}

@@ -289,5 +289,12 @@
  "time.hm": "{h}h {m}m",
  "time.m": "{m}m",
  "coins.n": "{n}",
- "stage.helpTitle": "Your friends came to cheer!"
+ "stage.helpTitle": "Your friends came to cheer!",
+ "festival.title": "Weekend Splash Festival",
+ "festival.desc": "Every Saturday and Sunday, coins you collect in areas are boosted ×{x}!",
+ "festival.left": "Ends in {t}",
+ "festival.next": "Weekend festival every Sat & Sun: coins ×{x}",
+ "result.festival": "Weekend festival ×{x}",
+ "time.dh": "{d}d {h}h",
+ "festival.pill": "Festival ×{x}"
 }

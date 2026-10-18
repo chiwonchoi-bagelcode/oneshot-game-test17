@@ -8,6 +8,7 @@ import path from 'node:path';
 
 const OUT = 'out';
 const args = new Set(process.argv.slice(2));
+rmSync(`${OUT}/assets/art`, { recursive: true, force: true });
 mkdirSync(`${OUT}/assets/art`, { recursive: true });
 mkdirSync(`${OUT}/assets/fonts`, { recursive: true });
 rmSync(`${OUT}/assets/audio`, { recursive: true, force: true });
@@ -40,6 +41,14 @@ await Promise.all([bundle(false), bundle(true), build({
 })]);
 copyFileSync('editor/editor.html', `${OUT}/editor.html`);
 if (existsSync('data/balance/profile.json')) copyFileSync('data/balance/profile.json', `${OUT}/profile.json`);
+
+// app icons (rendered by tools/release-art.mjs) + web app manifest
+if (existsSync('assets/app')) for (const f of readdirSync('assets/app')) copyFileSync(`assets/app/${f}`, `${OUT}/assets/${f}`);
+writeFileSync(`${OUT}/manifest.webmanifest`, JSON.stringify({
+  name: '물총 구조대 · Splash Rescue', short_name: '물총 구조대', start_url: './index.html', display: 'standalone', orientation: 'portrait',
+  background_color: '#3f7a2a', theme_color: '#3f7a2a',
+  icons: [{ src: 'assets/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: 'assets/icon-512.png', sizes: '512x512', type: 'image/png' }],
+}));
 
 // atlases
 for (const f of readdirSync('assets/art')) if (f.endsWith('.png')) copyFileSync(`assets/art/${f}`, `${OUT}/assets/art/${f}`);
@@ -83,7 +92,9 @@ const html = (script, title) => `<!doctype html>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="description" content="엄지 하나로 끈적이를 씻어 내고 동물을 구하는 물총 액션 · One-thumb water-gun rescue action">
 <title>${title}</title>
-<link rel="icon" type="image/png" href="assets/icon-192.png">
+<link rel="icon" type="image/png" href="assets/favicon-64.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preload" href="assets/fonts/jua.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="assets/fonts/fredoka.woff2" as="font" type="font/woff2" crossorigin>
 <style>${css}</style>

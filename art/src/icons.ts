@@ -110,6 +110,19 @@ export function register() {
     c.fillStyle = '#ffcf3d'; c.fillRect(-6, -18, 12, 48); c.strokeStyle = OUT; c.lineWidth = 2; c.strokeRect(-6, -18, 12, 48);
     for (const s of [-1, 1]) { const bw = ellipsePath(s * 11, -24, 11, 7, s * 0.4); cel(c, bw, B(s * 11 - 11, -31, 22, 14), '#ffcf3d', '#d9951f', null, { outline: 2.2 }); }
   });
+  ic('ic_festival', (c) => {
+    // a water balloon under a string of pennants
+    c.save(); c.lineCap = 'round'; c.strokeStyle = OUT; c.lineWidth = 3; c.beginPath(); c.moveTo(-32, -28); c.quadraticCurveTo(0, -12, 32, -28); c.stroke(); c.restore();
+    const cols: [string, string][] = [['#ef5a4f', '#b93a35'], ['#ffcf3d', '#d9951f'], ['#6cc04a', '#3f8a2a'], ['#ff8fb8', '#d9608f']];
+    [-24, -8, 8, 24].forEach((x, i) => {
+      const y = -28 + 16 * (1 - (x / 32) ** 2) * 0.5 + 1;
+      const p = new Path2D(); p.moveTo(x - 7, y - 1); p.lineTo(x + 7, y - 1); p.lineTo(x, y + 14); p.closePath();
+      cel(c, p, B(x - 7, y - 1, 14, 15), cols[i][0], cols[i][1], null, { outline: 2.2 });
+    });
+    const b = ellipsePath(0, 10, 19, 21); cel(c, b, B(-19, -11, 38, 42), '#5ab8f5', '#2a74c8', '#bfe8ff', { outline: W });
+    const k = new Path2D(); k.moveTo(-5, 32); k.lineTo(5, 32); k.lineTo(0, 27); k.closePath(); cel(c, k, B(-5, 27, 10, 5), '#2a74c8', '#1d5aa0', null, { outline: 2 });
+    c.fillStyle = 'rgba(255,255,255,0.85)'; c.beginPath(); c.ellipse(-7, 2, 4, 7, 0.4, 0, 7); c.fill();
+  });
   ic('ic_music', (c) => {
     c.save(); c.strokeStyle = OUT; c.lineWidth = 6; c.beginPath(); c.moveTo(-6, 18); c.lineTo(-6, -24); c.lineTo(22, -30); c.lineTo(22, 12); c.stroke(); c.strokeStyle = '#5aa0e6'; c.lineWidth = 2.5; c.stroke(); c.restore();
     for (const [x, y] of [[-14, 20], [14, 14]]) { const n = ellipsePath(x, y, 10, 8, -0.3); cel(c, n, B(x - 10, y - 8, 20, 16), '#5aa0e6', '#3a6fb8', '#9ccaff', { outline: W }); }

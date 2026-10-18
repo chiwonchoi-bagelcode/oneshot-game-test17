@@ -3,6 +3,7 @@
 // Tapping anywhere skips the count-up.
 import { audio } from '../engine/audio';
 import { buzz } from '../engine/haptics';
+import { FESTIVAL } from '../config/balance';
 import { t, num } from '../i18n';
 import type { RunSummary } from '../meta/progress';
 import { save } from '../meta/save';
@@ -48,11 +49,13 @@ export class ResultScreen {
     const coinRow = h('div', { class: 'res-row' }, icon('p_coin_0', 40), h('span', { class: 'res-label' }, t('result.coins')), h('span', { class: 'res-val' }, '0'));
     const add = (el: HTMLElement) => { rows.appendChild(el); requestAnimationFrame(() => el.classList.add('in')); };
     this.step(250, () => { add(coinRow); this.countUp(coinRow.querySelector('.res-val')!, sum.coinsRun, 900); });
+    const fo = sum.festival ? 550 : 0; // the festival line pushes the later rows back
+    if (sum.festival) this.step(1150, () => { add(h('div', { class: 'res-row bonus' }, icon('ic_festival', 40), h('span', { class: 'res-label' }, t('result.festival', { x: FESTIVAL.coinMul })), h('span', { class: 'res-val' }, `+${num(sum.festival)}`))); audio.play('pickup_coin', { vol: 0.9 }); });
     if (sum.bonus) {
       const label = sum.bonusKind === 'first' ? t('result.firstClear') : sum.bonusKind === 'daily' ? t('daily.title') : t('result.clearBonus');
-      this.step(1200, () => { add(h('div', { class: 'res-row bonus' }, icon('ic_star', 40), h('span', { class: 'res-label' }, label), h('span', { class: 'res-val' }, `+${num(sum.bonus)}`))); audio.play('coin_burst', { vol: 0.8 }); });
+      this.step(1200 + fo, () => { add(h('div', { class: 'res-row bonus' }, icon('ic_star', 40), h('span', { class: 'res-label' }, label), h('span', { class: 'res-val' }, `+${num(sum.bonus)}`))); audio.play('coin_burst', { vol: 0.8 }); });
     }
-    this.step(sum.bonus ? 1900 : 1300, () => {
+    this.step((sum.bonus ? 1900 : 1300) + fo, () => {
       this.setCoins(save().coins);
       const animals = h('div', { class: 'res-animals' });
       const row = h('div', { class: 'res-row col' }, h('div', { class: 'res-sub' }, icon('ic_paw', 30), h('span', {}, t('result.animals')), h('span', { class: 'res-val' }, String(sum.rescued.length))), animals);
@@ -65,7 +68,7 @@ export class ResultScreen {
       }, true));
       if (!sum.rescued.length) animals.appendChild(h('div', { class: 'res-none' }, '—'));
     });
-    const after = (sum.bonus ? 1900 : 1300) + sum.rescued.length * 260 + 300;
+    const after = (sum.bonus ? 1900 : 1300) + fo + sum.rescued.length * 260 + 300;
     this.step(after, () => {
       add(h('div', { class: 'res-row small' }, icon('ic_goo', 34), h('span', { class: 'res-label' }, t('result.washed')), h('span', { class: 'res-val' }, num(sum.washed)), icon('ic_check', 26), h('span', { class: 'res-val' }, `${sum.rooms}/${sum.totalRooms}`)));
       if (sum.rescued.length || sum.result !== 'clear') add(h('div', { class: 'res-kept' }, t('result.kept')));

@@ -289,5 +289,12 @@
  "time.hm": "{h}시간 {m}분",
  "time.m": "{m}분",
  "coins.n": "{n}",
- "stage.helpTitle": "친구들이 응원하러 왔어요!"
+ "stage.helpTitle": "친구들이 응원하러 왔어요!",
+ "festival.title": "주말 물놀이 축제",
+ "festival.desc": "토요일과 일요일에는 구역에서 모은 코인이 {x}배!",
+ "festival.left": "축제 끝까지 {t}",
+ "festival.next": "토·일요일엔 주말 축제: 코인 ×{x}",
+ "result.festival": "주말 축제 ×{x}",
+ "time.dh": "{d}일 {h}시간",
+ "festival.pill": "축제 ×{x}"
 }

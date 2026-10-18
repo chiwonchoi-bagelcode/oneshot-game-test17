@@ -1,7 +1,7 @@
 // Permanent progression: rewards after a run, upgrades, animal bonds, feature
 // unlocks, daily tasks, the daily challenge, login stamps and shelter gifts.
 import {
-  ASSIST, BOND_THRESHOLDS, assistLevel, DAILY, DECOR, GIFTS, MISSIONS, MISSIONS_PER_DAY, MISSION_ALL_BONUS, REWARDS, SPECIES, STAGE_COUNT,
+  ASSIST, BOND_THRESHOLDS, assistLevel, DAILY, DECOR, FESTIVAL, GIFTS, MISSIONS, MISSIONS_PER_DAY, MISSION_ALL_BONUS, REWARDS, SPECIES, STAGE_COUNT,
   STREAK_AFTER_WEEK, STREAK_REWARDS, UNLOCKS, UPGRADES, bondLevel, gunTierFor, upgradeCost, type SpeciesId, type UpgradeId,
 } from '../config/balance';
 import { Rng, hashString } from '../sim/rng';
@@ -117,7 +117,7 @@ export interface BondUp { species: SpeciesId; from: number; to: number; count: n
 export interface RunSummary {
   result: 'clear' | 'fail' | 'quit';
   stage: number;
-  coinsRun: number; bonus: number; bonusKind: 'first' | 'replay' | 'daily' | null; total: number;
+  coinsRun: number; bonus: number; bonusKind: 'first' | 'replay' | 'daily' | null; festival: number; total: number;
   rescued: SpeciesId[]; newSpecies: SpeciesId[]; bondUps: BondUp[];
   washed: number; rooms: number; totalRooms: number; seconds: number;
   firstClear: boolean; tierBefore: number;
@@ -145,6 +145,8 @@ export function applyRun(run: RunState, result: 'clear' | 'fail' | 'quit', secon
   const coinsRun = run.coins;
   earn(coinsRun, daily ? 'daily_run' : 'run');
   if (bonus) earn(bonus, daily ? 'daily' : 'clear_bonus');
+  const festival = !daily && festivalActive() ? Math.round(coinsRun * (FESTIVAL.coinMul - 1)) : 0;
+  if (festival) earn(festival, 'festival');
   // animals
   const newSpecies: SpeciesId[] = []; const bondUps: BondUp[] = [];
   for (const sp of run.rescued) {
@@ -182,7 +184,7 @@ export function applyRun(run: RunState, result: 'clear' | 'fail' | 'quit', secon
   bump('pressure', run.pressureFulls); bump('nohit', run.noHitRooms); if (result === 'clear') bump('clear', 1);
   markDirty();
   return {
-    result, stage, coinsRun, bonus, bonusKind, total: coinsRun + bonus, rescued: run.rescued.slice(), newSpecies, bondUps,
+    result, stage, coinsRun, bonus, bonusKind, festival, total: coinsRun + bonus + festival, rescued: run.rescued.slice(), newSpecies, bondUps,
     washed: run.washed, rooms: run.roomsCleared, totalRooms: run.level.rooms.length, seconds, firstClear,
     tierBefore: gunTier(), missionsDone: done, deathSource,
   };
@@ -332,6 +334,22 @@ export function dailyChallenge(levels: LevelDef[]): DailyInfo {
   const region = pool[Math.floor(r.next() * pool.length)].region;
   const level: LevelDef = { id: `daily-${d}`, stage: Math.min(STAGE_COUNT, top), tier: Math.min(STAGE_COUNT, top), region, rooms };
   return { mod, level, mods: MODS[mod] };
+}
+
+// ---------------------------------------------------------------- weekend festival
+export function festivalOpen(): boolean { return highestCleared() >= FESTIVAL.unlockStage; }
+export function festivalActive(): boolean { return festivalOpen() && FESTIVAL.days.includes(new Date(nowMs()).getDay()); }
+// ms until the festival ends (it ends at the start of the first non-festival day)
+export function festivalRemainingMs(): number {
+  const n = new Date(nowMs()); let d = 1;
+  while (d < 7 && FESTIVAL.days.includes(new Date(n.getFullYear(), n.getMonth(), n.getDate() + d).getDay())) d++;
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate() + d).getTime() - n.getTime();
+}
+// key of the current festival weekend, used to announce it once
+export function festivalKey(): string {
+  const n = new Date(nowMs()); let d = 0;
+  while (d < 6 && FESTIVAL.days.includes(new Date(n.getFullYear(), n.getMonth(), n.getDate() - d - 1).getDay())) d++;
+  return today(save().dayOffset - d);
 }
 
 export function dailyRemainingMs(): number {

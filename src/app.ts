@@ -7,7 +7,7 @@ import { screen, onResize } from './engine/screen';
 import { onLangChange, t } from './i18n';
 import { PlayScreen, type PlayOutcome } from './game/play';
 import {
-  applyRun, assistFor, dailyChallenge, featureOpen, knownSpecies, markAnnounced, metaPower, nextStage, pendingUnlocks, refreshDay, type RunSummary,
+  applyRun, assistFor, dailyChallenge, featureOpen, festivalActive, festivalKey, knownSpecies, markAnnounced, metaPower, nextStage, pendingUnlocks, refreshDay, type RunSummary,
 } from './meta/progress';
 import { flush, markDirty, save, today } from './meta/save';
 import { BOT_EXPERT, BOT_NOVICE, BOT_PLAYER } from './sim/bot';
@@ -15,7 +15,7 @@ import type { LevelDef } from './sim/types';
 import { track } from './services/analytics';
 import { HomeScreen, type Tab } from './ui/home';
 import { closeAll, isOpen } from './ui/modal';
-import { openDaily, openEvolve, openMissions, openSettings, openStreak, openUnlock } from './ui/popups';
+import { openDaily, openEvolve, openFestival, openMissions, openSettings, openStreak, openUnlock } from './ui/popups';
 import { ResultScreen } from './ui/result';
 import { TitleScreen } from './ui/title';
 import { h } from './ui/dom';
@@ -144,7 +144,11 @@ export class App {
         if (!hadUnlocks && !s.streak.claimedToday && s.stats.runs > 0 && !isOpen() && s.flags[`streakShown_${d}`] !== true) {
           s.flags[`streakShown_${d}`] = true; markDirty();
           openStreak(() => { this.home?.refreshCoins(); this.home?.refreshMapState(); });
+          return;
         }
+        // the weekend festival is announced once per weekend, when nothing else was shown
+        const fk = `festivalShown_${festivalKey()}`;
+        if (!hadUnlocks && festivalActive() && !isOpen() && !s.flags[fk]) { s.flags[fk] = true; markDirty(); openFestival(); }
         return;
       }
       markAnnounced(f);

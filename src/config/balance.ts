@@ -265,6 +265,10 @@ export const DECOR: DecorDef[] = [
   { id: 'fountain', cost: 3600, giftBonus: 0.1 },
 ];
 
+// Weekend Splash Festival: every Saturday and Sunday (device local time),
+// coins collected in areas (not the daily challenge) are multiplied.
+export const FESTIVAL = { days: [6, 0], coinMul: 1.5, unlockStage: 3 };
+
 export const UNLOCKS = {
   upgrades: 0, // after the first run ends
   shelter: 0, // after the first run that rescued an animal

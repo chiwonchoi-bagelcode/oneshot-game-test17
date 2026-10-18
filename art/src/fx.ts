@@ -99,7 +99,7 @@ export function register() {
     ctx.translate(150, 150);
     for (let i = 0; i < 14; i++) {
       const a = (i / 14) * Math.PI * 2; const g = ctx.createLinearGradient(0, 0, Math.cos(a) * 150, Math.sin(a) * 150);
-      g.addColorStop(0, 'rgba(255,250,210,0.9)'); g.addColorStop(1, 'rgba(255,250,210,0)');
+      g.addColorStop(0, 'rgba(255,250,210,0.9)'); g.addColorStop(0.88, 'rgba(255,250,210,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 150, a - 0.09, a + 0.09); ctx.closePath(); ctx.fill();
     }
   });

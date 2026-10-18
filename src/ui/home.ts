@@ -1,13 +1,13 @@
 // Home hub: world map (Adventure), Upgrades and Shelter tabs, with the daily
 // features on the side of the map. Rendering of map/shelter goes to the canvas.
-import { DECOR, GIFTS, SPECIES, UPGRADES, type SpeciesId } from '../config/balance';
+import { DECOR, FESTIVAL, GIFTS, SPECIES, UPGRADES, type SpeciesId } from '../config/balance';
 import { audio } from '../engine/audio';
 import { buzz } from '../engine/haptics';
 import { screen } from '../engine/screen';
 import { t, num, pct } from '../i18n';
 import {
   bondProgress, buyDecor, collectGifts, featureOpen, featureUpgradeOpen, giftRate, giftsPending, highestCleared, isCleared,
-  missionsClaimable, nextStage, stageUnlocked, upgradeInfo, assistFor, bonds,
+  festivalActive, missionsClaimable, nextStage, stageUnlocked, upgradeInfo, assistFor, bonds,
 } from '../meta/progress';
 import { save } from '../meta/save';
 import { MapView, regionOf } from '../render/mapView';
@@ -18,6 +18,7 @@ import { track } from '../services/analytics';
 import { h, icon, once } from './dom';
 import { closeModal, isOpen, openModal, toast } from './modal';
 import { UpgradePanel } from './upgrades';
+import { openFestival } from './popups';
 
 export type Tab = 'map' | 'upgrade' | 'shelter';
 
@@ -55,6 +56,7 @@ export class HomeScreen {
   private cta!: HTMLElement;
   private giftBtn!: HTMLElement;
   private shelterHead!: HTMLElement;
+  private festPill!: HTMLElement;
   private drag = { on: false, id: -1, y0: 0, y: 0, x0: 0, moved: 0, t: 0, vy: 0, lastY: 0, lastT: 0 };
   private badgeTimer = 0;
 
@@ -80,7 +82,9 @@ export class HomeScreen {
     this.coinEl = h('span', { class: 'num' }, num(save().coins));
     this.shelterHead = h('div', { class: 'sh-head' });
     const settings = h('button', { class: 'btn-icon', 'aria-label': t('settings.title'), onclick: once(() => this.api.openSettings()) }, icon('ic_gear', 32));
-    const top = h('div', { class: 'topbar' }, h('div', { class: 'pill coin-pill' }, icon('p_coin_0', 28), this.coinEl), h('div', { class: 'grow' }, this.shelterHead), settings);
+    // weekend festival pill (map tab only), opens the festival details
+    this.festPill = h('button', { class: 'fest-pill', onclick: once(() => openFestival()) }, icon('ic_festival', 34), h('span', {}, t('festival.pill', { x: FESTIVAL.coinMul })));
+    const top = h('div', { class: 'topbar' }, h('div', { class: 'pill coin-pill' }, icon('p_coin_0', 28), this.coinEl), h('div', { class: 'grow' }, this.shelterHead, this.festPill), settings);
     // side buttons on the map
     this.side = h('div', { class: 'side' });
     this.cta = h('button', { class: 'btn btn-primary big cta', onclick: once(() => this.api.play(this.map.current)) });
@@ -142,6 +146,7 @@ export class HomeScreen {
     this.tab = tab;
     for (const k of Object.keys(this.pages) as Tab[]) { this.pages[k].classList.toggle('on', k === tab); this.navBtns[k].classList.toggle('on', k === tab); }
     this.shelterHead.classList.toggle('on', tab === 'shelter');
+    this.festPill.classList.toggle('on', tab === 'map' && festivalActive());
     if (tab === 'upgrade') {
       if (!this.upPanel) {
         this.upPanel = new UpgradePanel({ onCoins: () => this.refreshCoins(), onEvolve: (tier) => this.api.evolve(tier) });

@@ -1,12 +1,12 @@
 // Popups reachable from the hub: settings, login stamps, daily tasks, daily
 // challenge, feature unlocks and the water-gun evolution celebration.
-import { DAILY, GUN_TIERS, MISSION_ALL_BONUS, STREAK_REWARDS } from '../config/balance';
+import { DAILY, FESTIVAL, GUN_TIERS, MISSION_ALL_BONUS, STREAK_REWARDS } from '../config/balance';
 import { audio } from '../engine/audio';
 import { buzz, hapticsSupported, setHaptics } from '../engine/haptics';
 import { setQuality, defaultQuality, qualityLevel, type QualityLevel } from '../engine/quality';
 import { deviceLang, getLang, setLang, t, num, type Lang } from '../i18n';
 import {
-  claimAllMissionsBonus, claimMission, claimStreak, dailyRemainingMs, missionDef, streakReward, type Feature,
+  claimAllMissionsBonus, claimMission, claimStreak, dailyRemainingMs, festivalActive, festivalOpen, festivalRemainingMs, missionDef, streakReward, type Feature,
 } from '../meta/progress';
 import { markDirty, resetSave, save, flush } from '../meta/save';
 import { track } from '../services/analytics';
@@ -139,8 +139,22 @@ export function openDaily(mod: string, onPlay: () => void) {
       h('div', {}, h('div', { class: 'daily-mod' }, t(`daily.mod.${mod}`)), h('div', { class: 'daily-desc' }, t(`daily.mod.${mod}.desc`)))),
     h('div', { class: 'daily-reward' }, icon('p_coin_0', 32), h('span', {}, s.daily.cleared ? t('daily.done', { n: DAILY.replayCoins }) : t('daily.reward', { n: DAILY.firstClearCoins }))),
     s.daily.streak > 0 ? h('div', { class: 'daily-streak' }, icon('ic_streak', 30), t('daily.streak', { n: s.daily.streak })) : null,
+    festivalOpen() && !festivalActive() ? h('div', { class: 'daily-streak' }, icon('ic_festival', 30), h('span', {}, t('festival.next', { x: FESTIVAL.coinMul }))) : null,
     h('button', { class: 'btn btn-primary big', onclick: once(() => { closeModal('daily', true); onPlay(); }) }, icon('ic_play', 32), t('daily.play')));
   openModal(body, { id: 'daily', title: t('daily.title'), titleIcon: 'ic_daily' });
+}
+
+// ---------------------------------------------------------------- weekend festival
+export function openFestival(onClose?: () => void) {
+  if (isOpen('festival')) return;
+  const ms = festivalRemainingMs(); const d = Math.floor(ms / 86400000), hh = Math.floor((ms % 86400000) / 3600000), mm = Math.floor((ms % 3600000) / 60000);
+  const left = d > 0 ? t('time.dh', { d, h: hh }) : hh > 0 ? t('time.hm', { h: hh, m: mm }) : t('time.m', { m: Math.max(1, mm) });
+  const body = h('div', { class: 'unlock festival' }, icon('ic_festival', 110, 'unlock-ic'),
+    h('div', { class: 'unlock-title' }, t('festival.desc', { x: FESTIVAL.coinMul })),
+    h('div', { class: 'fest-left' }, t('festival.left', { t: left })),
+    h('button', { class: 'btn btn-primary big', onclick: once(() => closeModal('festival')) }, t('common.ok')));
+  openModal(body, { id: 'festival', title: t('festival.title'), titleIcon: 'ic_festival', onClose });
+  track('festival_view', { remainingH: Math.round(ms / 3600000) });
 }
 
 // ---------------------------------------------------------------- unlock + evolve
