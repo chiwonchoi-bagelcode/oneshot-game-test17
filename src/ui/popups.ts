@@ -1,15 +1,16 @@
 // Popups reachable from the hub: settings, login stamps, daily tasks, daily
 // challenge, feature unlocks and the water-gun evolution celebration.
-import { DAILY, FESTIVAL, GUN_TIERS, MISSION_ALL_BONUS, STREAK_REWARDS } from '../config/balance';
+import { DAILY, FESTIVAL, GUN_TIERS, MISSION_ALL_BONUS, PLAYER, STREAK_REWARDS } from '../config/balance';
 import { audio } from '../engine/audio';
 import { buzz, hapticsSupported, setHaptics } from '../engine/haptics';
 import { setQuality, defaultQuality, qualityLevel, type QualityLevel } from '../engine/quality';
 import { deviceLang, getLang, setLang, t, num, type Lang } from '../i18n';
 import {
-  claimAllMissionsBonus, claimMission, claimStreak, dailyRemainingMs, festivalActive, festivalOpen, festivalRemainingMs, missionDef, streakReward, type Feature,
+  metaPower, claimAllMissionsBonus, claimMission, claimStreak, dailyRemainingMs, festivalActive, festivalOpen, festivalRemainingMs, missionDef, streakReward, type Feature,
 } from '../meta/progress';
 import { markDirty, resetSave, save, flush } from '../meta/save';
 import { track } from '../services/analytics';
+import { computeStats } from '../sim/stats';
 import { h, icon, once } from './dom';
 import { closeModal, isOpen, openModal, toast } from './modal';
 
@@ -167,13 +168,21 @@ export function openUnlock(f: Feature, onClose: () => void) {
   openModal(body, { id: `unlock-${f}`, cls: 'modal-unlock', onClose });
 }
 
+// the exact jump this evolution gives, from the gun tier table
+function evolveGains(a: number, b: number): string[] {
+  const A = GUN_TIERS[a], B = GUN_TIERS[b]; const pc = (x: number, y: number) => Math.round((y / x - 1) * 100);
+  // range adds a flat amount that upgrades and friends then scale, so show the scaled number seen in game
+  const rangeMul = computeStats(metaPower(), {}, 0).range / (PLAYER.range + B.range);
+  return [t('evolve.dmg', { v: pc(A.dmg, B.dmg) }), t('evolve.width', { v: pc(A.width, B.width) }), t('evolve.splash', { v: pc(A.splash, B.splash) }), t('evolve.range', { v: Math.round((B.range - A.range) * rangeMul) })];
+}
+
 export function openEvolve(tier: number) {
   audio.stinger('stinger_evolve'); buzz('heavy');
   const prev = Math.max(0, tier - 1);
   const body = h('div', { class: 'evolve' },
-    h('div', { class: 'evolve-row' }, icon(`gun_${prev}`, 70, 'evolve-old'), icon('ic_arrow', 44), icon(`gun_${tier}`, 120, 'evolve-new')),
+    h('div', { class: 'evolve-row' }, icon(`gun_${prev}`, 70, 'evolve-old'), icon('ic_arrow', 44), h('span', { class: 'evolve-glow' }, icon(`gun_${tier}`, 120, 'evolve-new'))),
     h('div', { class: 'evolve-name' }, t(`gun.${tier}`)),
-    h('div', { class: 'evolve-desc' }, t('gun.evolvedDesc')),
+    h('div', { class: 'evolve-stats' }, ...evolveGains(prev, tier).map((g) => h('span', { class: 'evolve-stat' }, g))),
     tier < GUN_TIERS.length - 1 ? h('div', { class: 'evolve-next' }, icon('gun_6', 54, 'locked'), h('span', {}, t('upgrade.dream'))) : null,
     h('button', { class: 'btn btn-primary big', onclick: once(() => closeModal('evolve')) }, t('common.ok')));
   openModal(body, { id: 'evolve', title: t('gun.evolved'), cls: 'modal-evolve' });

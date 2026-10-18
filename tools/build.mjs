@@ -111,10 +111,10 @@ const html = (script, title) => `<!doctype html>
 `;
 writeFileSync(`${OUT}/index.html`, html('game.js', '물총 구조대 · Splash Rescue'));
 writeFileSync(`${OUT}/dev.html`, html('game-dev.js', '[DEV] 물총 구조대'));
-if (existsSync('assets/icon-192.png')) copyFileSync('assets/icon-192.png', `${OUT}/assets/icon-192.png`);
 
 // docs
-for (const [src, dst] of [['docs/plan.md', 'release/plan.md'], ['docs/report.md', 'release/report.md']]) if (existsSync(src)) copyFileSync(src, `${OUT}/${dst}`);
+mkdirSync(`${OUT}/release/store`, { recursive: true });
+for (const [src, dst] of [['docs/plan.md', 'release/plan.md'], ['docs/report.md', 'release/report.md'], ['docs/store/ko.md', 'release/store/ko.md'], ['docs/store/en.md', 'release/store/en.md']]) if (existsSync(src)) copyFileSync(src, `${OUT}/${dst}`);
 
 const size = (p) => statSync(p).size;
 const total = (dir) => readdirSync(dir, { withFileTypes: true }).reduce((a, e) => a + (e.isDirectory() ? total(path.join(dir, e.name)) : size(path.join(dir, e.name))), 0);

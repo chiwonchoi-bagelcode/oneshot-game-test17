@@ -103,7 +103,13 @@ class AudioManager {
     }
   }
 
+  // capture mode (trailer tool): every sound request on the capture clock, mixed offline later
+  log: { t: number; k: 's' | 'l' | 'm'; n: string | null; v?: number; r?: number; on?: boolean }[] | null = null;
+  logClock: () => number = () => 0;
+  private logLoop = new Map<string, { on: boolean; v: number; r: number }>();
+
   play(name: string, o: { vol?: number; rate?: number; pan?: number; vary?: number } = {}) {
+    if (this.log) this.log.push({ t: this.logClock(), k: 's', n: name, v: o.vol ?? 1, r: o.rate ?? 1 });
     if (!this.ctx || !this.sfxGain || this.ctx.state !== 'running' || this.sfxVol <= 0) return;
     let buf = this.buffers.get(name);
     if (!buf) {
@@ -129,6 +135,10 @@ class AudioManager {
   }
 
   loop(name: string, on: boolean, vol = 1, rate = 1) {
+    if (this.log) {
+      const p = this.logLoop.get(name);
+      if (!p || p.on !== on || Math.abs(p.v - vol) > 0.04 || Math.abs(p.r - rate) > 0.03) { this.logLoop.set(name, { on, v: vol, r: rate }); this.log.push({ t: this.logClock(), k: 'l', n: name, on, v: vol, r: rate }); }
+    }
     if (!this.ctx || !this.sfxGain) return;
     const cur = this.loopNodes.get(name);
     if (on) {
@@ -155,6 +165,7 @@ class AudioManager {
   music_(name: string | null) { this.playMusic(name); }
 
   playMusic(name: string | null) {
+    if (this.log && name !== this.wantMusic) this.log.push({ t: this.logClock(), k: 'm', n: name });
     this.wantMusic = name;
     if (this.music && this.music.name === name) { if (this.music.el.paused && !this.hidden) this.music.el.play().catch(() => {}); return; }
     // fade out the old track

@@ -1274,6 +1274,10 @@
       this.duck = 1;
       this.decoded = false;
       this.routeMusic = location.protocol === "http:" || location.protocol === "https:";
+      // capture mode (trailer tool): every sound request on the capture clock, mixed offline later
+      this.log = null;
+      this.logClock = () => 0;
+      this.logLoop = /* @__PURE__ */ new Map();
     }
     init(manifest) {
       this.manifest = manifest;
@@ -1363,6 +1367,7 @@
       }
     }
     play(name, o = {}) {
+      if (this.log) this.log.push({ t: this.logClock(), k: "s", n: name, v: o.vol ?? 1, r: o.rate ?? 1 });
       if (!this.ctx || !this.sfxGain || this.ctx.state !== "running" || this.sfxVol <= 0) return;
       let buf = this.buffers.get(name);
       if (!buf) {
@@ -1398,6 +1403,13 @@
       src.start();
     }
     loop(name, on, vol = 1, rate = 1) {
+      if (this.log) {
+        const p = this.logLoop.get(name);
+        if (!p || p.on !== on || Math.abs(p.v - vol) > 0.04 || Math.abs(p.r - rate) > 0.03) {
+          this.logLoop.set(name, { on, v: vol, r: rate });
+          this.log.push({ t: this.logClock(), k: "l", n: name, on, v: vol, r: rate });
+        }
+      }
       if (!this.ctx || !this.sfxGain) return;
       const cur = this.loopNodes.get(name);
       if (on) {
@@ -1437,6 +1449,7 @@
       this.playMusic(name);
     }
     playMusic(name) {
+      if (this.log && name !== this.wantMusic) this.log.push({ t: this.logClock(), k: "m", n: name });
       this.wantMusic = name;
       if (this.music && this.music.name === name) {
         if (this.music.el.paused && !this.hidden) this.music.el.play().catch(() => {
@@ -1814,7 +1827,6 @@
     "gun.5": "\uBB3C\uB300\uD3EC",
     "gun.6": "\uAC70\uB300 \uBB3C\uB300\uD3EC",
     "gun.evolved": "\uBB3C\uCD1D\uC774 \uC9C4\uD654\uD588\uC5B4\uC694!",
-    "gun.evolvedDesc": "\uBB3C\uC904\uAE30\uAC00 \uB354 \uAD75\uACE0 \uBA40\uB9AC \uB098\uAC00\uC694.",
     "region.forest": "\uD587\uC0B4 \uC232",
     "region.village": "\uD48D\uCC28 \uB9C8\uC744",
     "region.lake": "\uBC18\uC9DD \uD638\uC218",
@@ -1842,7 +1854,7 @@
     "shelter.collect": "\uC120\uBB3C \uBC1B\uAE30",
     "shelter.giftReady": "\uC120\uBB3C {n}\uCF54\uC778",
     "shelter.giftNone": "\uC120\uBB3C\uC744 \uBAA8\uC73C\uB294 \uC911",
-    "shelter.giftRate": "\uC2DC\uAC04\uB2F9 {n}\uCF54\uC778 \xB7 \uCD5C\uB300 {h}\uC2DC\uAC04",
+    "shelter.giftRate": "\uC2DC\uAC04\uB2F9 {n} \xB7 \uCD5C\uB300 {h}\uC2DC\uAC04",
     "shelter.bond": "\uCE5C\uBC00\uB3C4 {n}",
     "shelter.bondNext": "{n}\uBC88 \uB354 \uAD6C\uD558\uBA74 \uCE5C\uBC00\uB3C4 \uC5C5",
     "shelter.bondMax": "\uCE5C\uBC00\uB3C4 \uCD5C\uACE0!",
@@ -1982,7 +1994,11 @@
     "festival.next": "\uD1A0\xB7\uC77C\uC694\uC77C\uC5D4 \uC8FC\uB9D0 \uCD95\uC81C: \uCF54\uC778 \xD7{x}",
     "result.festival": "\uC8FC\uB9D0 \uCD95\uC81C \xD7{x}",
     "time.dh": "{d}\uC77C {h}\uC2DC\uAC04",
-    "festival.pill": "\uCD95\uC81C \xD7{x}"
+    "festival.pill": "\uCD95\uC81C \xD7{x}",
+    "evolve.dmg": "\uD53C\uD574 +{v}%",
+    "evolve.width": "\uAD75\uAE30 +{v}%",
+    "evolve.splash": "\uBB3C\uBCF4\uB77C +{v}%",
+    "evolve.range": "\uC0AC\uAC70\uB9AC +{v}"
   };
 
   // data/i18n/en.json
@@ -2116,7 +2132,6 @@
     "gun.5": "Water Cannon",
     "gun.6": "Mega Cannon",
     "gun.evolved": "Your water gun evolved!",
-    "gun.evolvedDesc": "The stream is thicker and reaches farther.",
     "region.forest": "Sunny Forest",
     "region.village": "Windmill Village",
     "region.lake": "Sparkle Lake",
@@ -2284,7 +2299,11 @@
     "festival.next": "Weekend festival every Sat & Sun: coins \xD7{x}",
     "result.festival": "Weekend festival \xD7{x}",
     "time.dh": "{d}d {h}h",
-    "festival.pill": "Festival \xD7{x}"
+    "festival.pill": "Festival \xD7{x}",
+    "evolve.dmg": "Damage +{v}%",
+    "evolve.width": "Width +{v}%",
+    "evolve.splash": "Splash +{v}%",
+    "evolve.range": "Range +{v}"
   };
 
   // src/i18n/index.ts
@@ -2482,6 +2501,11 @@
 
   // src/game/play.ts
   init_balance();
+
+  // src/render/streamLook.ts
+  function visualWidth(w) {
+    return w < 30 ? w : 30 + 26 * (1 - Math.exp(-(w - 30) / 45));
+  }
 
   // src/render/roomView.ts
   init_balance();
@@ -2986,9 +3010,9 @@
           break;
         }
         case "rescue": {
-          fx.spawn("fx_rays", e.x, e.y - 20, { max: 1.1, scale: 0.5, scale1: 1.1, alpha: 0.9, vr: 0.6, additive: quality().glow });
-          fx.spawn(["fx_splash_0", "fx_splash_1", "fx_splash_2", "fx_splash_3", "fx_splash_4", "fx_splash_5"], e.x, e.y + 10, { fps: 14, max: 0.45, scale: 1.6 });
-          for (let i = 0; i < 10; i++) fx.spawn("p_heart", e.x, e.y - 20, { z: 10, vz: r.range(120, 280), vx: r.range(-140, 140), vy: r.range(-60, 30), g: 260, max: r.range(0.9, 1.4), scale: r.range(0.7, 1.2), drag: 1 });
+          fx.spawn("fx_rays", e.x, e.y - 10, { max: 1.1, scale: 0.5, scale1: 1, alpha: 0.85, vr: 0.6, additive: quality().glow, ground: true });
+          fx.spawn(["fx_splash_0", "fx_splash_1", "fx_splash_2", "fx_splash_3", "fx_splash_4", "fx_splash_5"], e.x, e.y + 14, { fps: 14, max: 0.45, scale: 1.05, ground: true });
+          for (let i = 0; i < 10; i++) fx.spawn("p_heart", e.x, e.y - 50, { z: 10, vz: r.range(120, 280), vx: r.range(-140, 140), vy: r.range(-60, 30), g: 260, max: r.range(0.9, 1.4), scale: r.range(0.7, 1.2), drag: 1 });
           for (let i = 0; i < 12; i++) fx.spawn("p_goo_violet", e.x, e.y - 10, { z: 20, vz: r.range(150, 350), vx: r.range(-220, 220), vy: r.range(-120, 120), g: 900, max: 0.8, drag: 1.2 });
           for (let i = 0; i < 6; i++) fx.spawn(["p_sparkle_0", "p_sparkle_1", "p_sparkle_2"], e.x + r.range(-40, 40), e.y + r.range(-60, 10), { fps: 8, max: 0.6, scale: r.range(1, 1.6) });
           this.slowmo = 0.45;
@@ -3181,6 +3205,7 @@
       this.drawSorted(ctx2);
       this.drawStreams(ctx2);
       this.fx.draw(ctx2, false);
+      this.drawHeroes(ctx2);
       this.drawBullets(ctx2);
       this.fx.drawTexts(ctx2, this.font);
       ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -3293,7 +3318,7 @@
       for (const s of this.statics) buf.push({ y: s.sortY, k: 0, o: s });
       for (const m of sim.monsters) if (m.alive) buf.push({ y: m.y + m.r * 0.5, k: 1, o: m });
       for (const c of sim.cocoons) if (!c.freed) buf.push({ y: c.y + 20, k: 2, o: c });
-      for (const f of sim.followers) buf.push({ y: f.y, k: 3, o: f });
+      for (const f of sim.followers) if (f.joy <= 0) buf.push({ y: f.y, k: 3, o: f });
       buf.push({ y: sim.player.y, k: 4, o: sim.player });
       buf.sort((a, b) => a.y - b.y);
       for (const it of buf) {
@@ -3411,6 +3436,19 @@
       const bob = Math.sin(this.time * 3 + c.id) * 4;
       draw(ctx2, "mk_help", c.x + 28, c.y - 52 + bob, 1);
     }
+    // A just-freed animal pops out of its cocoon above every effect: a big hop,
+    // a squash-and-stretch and a soft glow, so the reward is the thing you see.
+    drawHeroes(ctx2) {
+      for (const f of this.sim.followers) {
+        if (f.joy <= 0) continue;
+        const k = Math.min(1, 1 - f.joy / 1.1);
+        const hop = k < 0.6 ? Math.sin(k / 0.6 * Math.PI) * 54 : Math.abs(Math.sin((k - 0.6) * 16)) * 10;
+        const pop = 1 + 0.4 * Math.max(0, 1 - k * 1.6);
+        const sq = k < 0.08 ? 1 - k * 3 : 1;
+        draw(ctx2, "fx_glow", f.x, f.y - 26 - hop, 0.9 * pop, false, 0, 0.75 * (1 - k * 0.7));
+        draw(ctx2, `a_${f.species}_happy_${Math.floor(this.time * 10) % 3}`, f.x, f.y + 4 - hop, 0.88 * pop, f.facing < 0, 0, 1, 1 / sq, sq);
+      }
+    }
     drawFollower(ctx2, f) {
       let name;
       let lift = 0;
@@ -3480,7 +3518,7 @@
         const nx = -(y1 - y0) / len, ny = (x1 - x0) / len;
         const wob = Math.sin(t2 * 9 + s.kind) * Math.min(6, len * 0.02);
         const cx = (x0 + x1) / 2 + nx * wob, cy = (y0 + y1) / 2 + ny * wob + len * 0.05;
-        const w = s.w;
+        const w = visualWidth(s.w);
         ctx2.save();
         ctx2.lineCap = "round";
         ctx2.lineJoin = "round";
@@ -3492,7 +3530,7 @@
         if (q.glow) {
           path();
           ctx2.strokeStyle = `rgba(140,220,255,${0.22 + pr * 0.18})`;
-          ctx2.lineWidth = w * 2.1;
+          ctx2.lineWidth = w * 1.8;
           ctx2.stroke();
         }
         path();
@@ -3519,7 +3557,7 @@
         if (s.kind !== 2) {
           ctx2.fillStyle = "rgba(235,250,255,0.9)";
           ctx2.beginPath();
-          ctx2.arc(x0, y0, w * 0.6, 0, Math.PI * 2);
+          ctx2.arc(x0, y0, Math.min(w * 0.6, 16), 0, Math.PI * 2);
           ctx2.fill();
         }
         ctx2.restore();
@@ -5399,7 +5437,7 @@
       this.lastXp = -1;
       this.lastFriends = -1;
       this.lastLv = -1;
-      this.hintState = { moved: false, fired: false, pressureShown: false, rescueShown: false, gateShown: false, idleTime: 0, rangeShown: 0 };
+      this.hintState = { moved: false, fired: false, pressureShown: false, rescueShown: false, gateShown: false, idleTime: 0, rangeShown: 0, rescueTime: 0 };
       this.wasFiring = false;
       this.roomStart = 0;
       this.coinStreak = 0;
@@ -5407,6 +5445,8 @@
       this.finished = false;
       this.stageBanner = 0;
       this.introShown = false;
+      this.botInput = { mx: 0, my: 0 };
+      this.ghostBase = null;
       this.o = o;
       this.onDone = onDone;
       this.run = createRun(o.level, o.meta, { known: o.known, seed: o.seed, mods: o.daily?.mods, revives: o.revives, daily: !!o.daily });
@@ -5541,6 +5581,7 @@
           this.acc -= DT;
           steps++;
           const input = this.bot ? this.bot.decide(this.sim, DT) : { mx: this.input.joy.mx, my: this.input.joy.my };
+          if (this.bot) this.botInput = input;
           this.sim.step(DT, input);
           for (const e of this.sim.drain()) this.onEvent(e);
           if (this.paused !== "none") break;
@@ -5560,6 +5601,22 @@
     }
     drawJoystick() {
       const j = this.input.joy;
+      if (this.o.ghostThumb && this.bot) {
+        const { mx, my } = this.botInput;
+        const on = Math.hypot(mx, my) > 0.15 && this.paused === "none";
+        if (on && !this.ghostBase) {
+          this.ghostBase = [screen.w * 0.6, screen.h * 0.8];
+          j.everMoved = true;
+        }
+        if (!on) this.ghostBase = null;
+        if (this.ghostBase) {
+          this.joyEl.style.display = "block";
+          this.joyEl.classList.add("ghost");
+          this.joyEl.style.transform = `translate(${this.ghostBase[0]}px, ${this.ghostBase[1]}px)`;
+          this.joyEl.firstChild.style.transform = `translate(${mx * 40}px, ${my * 40}px)`;
+        } else this.joyEl.style.display = "none";
+        return;
+      }
       if (j.active && !this.bot) {
         this.joyEl.style.display = "block";
         this.joyEl.style.transform = `translate(${j.ox}px, ${j.oy}px)`;
@@ -5706,7 +5763,8 @@
       let text = "";
       let wx = p.x, wy = p.y - 120;
       let showHand = false;
-      const tut = this.o.tutorial && !this.bot;
+      const human = !this.bot || !!this.o.ghostThumb;
+      const tut = this.o.tutorial && human;
       if (tut && !hs.moved && this.paused === "none") {
         text = t("hint.drag");
         showHand = true;
@@ -5715,18 +5773,20 @@
         text = t("hint.stop");
       } else if (tut && sim.state === "fight" && this.run.roomIndex === 0) {
         const c = sim.cocoons.find((cc) => !cc.freed);
+        if (c && c.hp < c.maxHp) hs.rescueShown = true;
         if (c && Math.hypot(c.x - p.x, c.y - p.y) < 380 && !hs.rescueShown && hs.fired) {
           text = t("hint.rescue");
           wx = c.x;
           wy = c.y - 110;
-          if (this.run.time > 25) hs.rescueShown = true;
+          hs.rescueTime += dt;
+          if (hs.rescueTime > 6) hs.rescueShown = true;
         }
       }
-      if (!text && sim.state === "fight" && !p.moving && !p.firing && p.stillTime > 1.2 && this.o.firstRuns < 4 && !this.bot) {
+      if (!text && sim.state === "fight" && !p.moving && !p.firing && p.stillTime > 1.2 && this.o.firstRuns < 4 && human) {
         text = t("hint.range");
         hs.rangeShown += dt;
       }
-      if (!text && sim.gateOpen && sim.state === "clear" && this.o.firstRuns < 3 && !this.bot) {
+      if (!text && sim.gateOpen && sim.state === "clear" && this.o.firstRuns < 3 && human) {
         hs.idleTime += p.moving ? 0 : dt;
         if (hs.idleTime > 2.2 && sim.cocoonsLeft() === 0) {
           text = t("hint.gate");
@@ -6686,7 +6746,7 @@
       const kk = S * (1 + 0.04 * this.tier) / 2;
       const x0 = hx + Math.cos(aim) * mx * kk - Math.sin(aim) * my * kk, y0 = hy + Math.sin(aim) * mx * kk + Math.cos(aim) * my * kk;
       const x1 = bx - 10, y1 = by - 18;
-      const w = this.shownW * (1 + this.pulse * 0.6);
+      const w = visualWidth(this.shownW * (1 + this.pulse * 0.6));
       const path = () => {
         g.beginPath();
         g.moveTo(x0, y0);
@@ -6839,6 +6899,7 @@
   init_progress();
   init_save();
   init_analytics();
+  init_stats();
   function openSettings(onChange) {
     if (isOpen("settings")) return;
     const s = save().settings;
@@ -7105,6 +7166,12 @@
     );
     openModal(body, { id: `unlock-${f}`, cls: "modal-unlock", onClose });
   }
+  function evolveGains(a, b) {
+    const A = GUN_TIERS[a], B = GUN_TIERS[b];
+    const pc = (x, y) => Math.round((y / x - 1) * 100);
+    const rangeMul = computeStats(metaPower(), {}, 0).range / (PLAYER.range + B.range);
+    return [t("evolve.dmg", { v: pc(A.dmg, B.dmg) }), t("evolve.width", { v: pc(A.width, B.width) }), t("evolve.splash", { v: pc(A.splash, B.splash) }), t("evolve.range", { v: Math.round((B.range - A.range) * rangeMul) })];
+  }
   function openEvolve(tier) {
     audio.stinger("stinger_evolve");
     buzz("heavy");
@@ -7112,9 +7179,9 @@
     const body = h(
       "div",
       { class: "evolve" },
-      h("div", { class: "evolve-row" }, icon(`gun_${prev}`, 70, "evolve-old"), icon("ic_arrow", 44), icon(`gun_${tier}`, 120, "evolve-new")),
+      h("div", { class: "evolve-row" }, icon(`gun_${prev}`, 70, "evolve-old"), icon("ic_arrow", 44), h("span", { class: "evolve-glow" }, icon(`gun_${tier}`, 120, "evolve-new"))),
       h("div", { class: "evolve-name" }, t(`gun.${tier}`)),
-      h("div", { class: "evolve-desc" }, t("gun.evolvedDesc")),
+      h("div", { class: "evolve-stats" }, ...evolveGains(prev, tier).map((g) => h("span", { class: "evolve-stat" }, g))),
       tier < GUN_TIERS.length - 1 ? h("div", { class: "evolve-next" }, icon("gun_6", 54, "locked"), h("span", {}, t("upgrade.dream"))) : null,
       h("button", { class: "btn btn-primary big", onclick: once(() => closeModal("evolve")) }, t("common.ok"))
     );
@@ -7689,6 +7756,8 @@
       this.last = 0;
       this.acc = 0;
       this.capture = this.params.has("capture");
+      this.playing = null;
+      // current run (read by the capture tools)
       this.result = null;
       this.fpsSamples = [];
       this.debug = {};
@@ -7726,8 +7795,17 @@
       else if (this.params.has("home")) this.goHome(this.params.get("home") || "map");
       else this.showTitle();
       if (this.capture) {
-        window.__advance = (n, dt = 1 / 30) => {
-          for (let i = 0; i < n; i++) this.tick(dt);
+        let ct = 0;
+        audio.log = [];
+        audio.logClock = () => ct;
+        const w = window;
+        w.__AUDIO_LOG__ = audio.log;
+        w.__CAPTURE_T__ = () => ct;
+        w.__advance = (n, dt = 1 / 30) => {
+          for (let i = 0; i < n; i++) {
+            this.tick(dt);
+            ct += dt;
+          }
         };
         return;
       }
@@ -7879,12 +7957,14 @@
         tutorial: level2.stage === 1 && s.stats.runs === 0 && !daily,
         firstRuns: s.stats.runs,
         bot,
+        ghostThumb: this.capture && this.params.has("thumb"),
         newMonster: !daily && !s.cleared[`s${level2.stage}`] ? level2.intro ?? null : null,
         revives: 1,
         daily: daily ?? void 0,
         onSettings: () => openSettings(() => {
         })
       }, this.ui, (r) => this.onPlayDone(play, r, !!daily, daily?.mod));
+      this.playing = play;
       this.setScene({ frame: (dt) => play.frame(dt), layout: () => play.layout(), destroy: () => play.destroy(), autoPause: () => play.autoPause() });
       if (assist) setTimeout(() => play.announce(t("stage.helpTitle"), t("stage.helpOffer", { hp: Math.round(assist * 30), dmg: Math.round(assist * 20) }), "small"), 1200);
     }

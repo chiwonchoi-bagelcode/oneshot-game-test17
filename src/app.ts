@@ -33,6 +33,7 @@ export class App {
   private last = 0;
   private acc = 0;
   capture = this.params.has('capture');
+  playing: PlayScreen | null = null; // current run (read by the capture tools)
   private result: ResultScreen | null = null;
   fpsSamples: number[] = [];
   debug: { onFrame?: (dt: number) => void } = {};
@@ -54,7 +55,11 @@ export class App {
     else if (this.params.has('home')) this.goHome((this.params.get('home') || 'map') as Tab);
     else this.showTitle();
     if (this.capture) {
-      (window as unknown as { __advance: (n: number, dt?: number) => void }).__advance = (n: number, dt = 1 / 30) => { for (let i = 0; i < n; i++) this.tick(dt); };
+      // trailer/screenshot capture: time only moves when the tool advances it; sounds are logged for an offline mix
+      let ct = 0; audio.log = []; audio.logClock = () => ct;
+      const w = window as unknown as { __advance: (n: number, dt?: number) => void; __AUDIO_LOG__: unknown; __CAPTURE_T__: () => number };
+      w.__AUDIO_LOG__ = audio.log; w.__CAPTURE_T__ = () => ct;
+      w.__advance = (n: number, dt = 1 / 30) => { for (let i = 0; i < n; i++) { this.tick(dt); ct += dt; } };
       return;
     }
     const loop = (ts: number) => {
@@ -182,9 +187,10 @@ export class App {
     const attempt = (s.attempts[`s${level.stage}`]?.tries ?? 0) + 1;
     const play = new PlayScreen({
       level, meta: metaPower(assist), known: knownSpecies(), seed, attempt, tutorial: level.stage === 1 && s.stats.runs === 0 && !daily,
-      firstRuns: s.stats.runs, bot, newMonster: !daily && !s.cleared[`s${level.stage}`] ? level.intro ?? null : null, revives: 1, daily: daily ?? undefined,
+      firstRuns: s.stats.runs, bot, ghostThumb: this.capture && this.params.has('thumb'), newMonster: !daily && !s.cleared[`s${level.stage}`] ? level.intro ?? null : null, revives: 1, daily: daily ?? undefined,
       onSettings: () => openSettings(() => {}),
     }, this.ui, (r) => this.onPlayDone(play, r, !!daily, daily?.mod));
+    this.playing = play;
     this.setScene({ frame: (dt) => play.frame(dt), layout: () => play.layout(), destroy: () => play.destroy(), autoPause: () => play.autoPause() });
     if (assist) setTimeout(() => play.announce(t('stage.helpTitle'), t('stage.helpOffer', { hp: Math.round(assist * 30), dmg: Math.round(assist * 20) }), 'small'), 1200);
   }

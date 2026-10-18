@@ -12,7 +12,8 @@ const page = await browser.newPage({ viewport: { width: w, height: hgt }, device
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(m.text()); });
-await page.goto(`http://localhost:8123/${query.startsWith('dev') ? '' : 'index.html'}?${query.replace(/^dev\??/, '')}`.replace('index.html?dev', 'dev.html?'));
+// a query starting with "dev?" opens the dev build (presets, debug panel)
+await page.goto(`http://localhost:8123/${query.startsWith('dev') ? 'dev.html' : 'index.html'}?${query.replace(/^dev\??/, '')}`);
 const t0 = Date.now();
 for (const t of times) {
   const wait = t * 1000 - (Date.now() - t0);

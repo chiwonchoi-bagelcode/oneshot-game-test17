@@ -21,6 +21,8 @@ export interface PlayOptions {
   level: LevelDef; meta: MetaPower; known: SpeciesId[]; seed: number; attempt: number;
   tutorial: boolean; firstRuns: number; daily?: { mod: string; mods: RunMods };
   bot?: BotProfile; newMonster?: MonsterKind | null; revives: number;
+  // capture only: show the bot's input as a thumb on a floating joystick, with the first-run hints
+  ghostThumb?: boolean;
   onSettings: () => void;
 }
 
@@ -48,7 +50,7 @@ export class PlayScreen {
   private onDone: (r: PlayOutcome) => void;
   private revivesUsed = 0;
   private lastHp = -1; private lastCoins = -1; private lastXp = -1; private lastFriends = -1; private lastLv = -1;
-  private hintState = { moved: false, fired: false, pressureShown: false, rescueShown: false, gateShown: false, idleTime: 0, rangeShown: 0 };
+  private hintState = { moved: false, fired: false, pressureShown: false, rescueShown: false, gateShown: false, idleTime: 0, rangeShown: 0, rescueTime: 0 };
   private wasFiring = false;
   private roomStart = 0;
   private coinStreak = 0; private coinStreakT = 0;
@@ -185,6 +187,7 @@ export class PlayScreen {
       while (this.acc >= DT && steps < 6) {
         this.acc -= DT; steps++;
         const input = this.bot ? this.bot.decide(this.sim, DT) : { mx: this.input.joy.mx, my: this.input.joy.my };
+        if (this.bot) this.botInput = input;
         this.sim.step(DT, input);
         for (const e of this.sim.drain()) this.onEvent(e);
         if (this.paused !== 'none') break;
@@ -203,8 +206,23 @@ export class PlayScreen {
     this.coinStreakT -= dtReal; if (this.coinStreakT <= 0) this.coinStreak = 0;
   }
 
+  private botInput = { mx: 0, my: 0 };
+  private ghostBase: [number, number] | null = null;
+
   private drawJoystick() {
     const j = this.input.joy;
+    if (this.o.ghostThumb && this.bot) {
+      // the bot's stick as a real thumb would show it: appears where the thumb lands, gone when lifted
+      const { mx, my } = this.botInput; const on = Math.hypot(mx, my) > 0.15 && this.paused === 'none';
+      if (on && !this.ghostBase) { this.ghostBase = [screen.w * 0.6, screen.h * 0.8]; j.everMoved = true; }
+      if (!on) this.ghostBase = null;
+      if (this.ghostBase) {
+        this.joyEl.style.display = 'block'; this.joyEl.classList.add('ghost');
+        this.joyEl.style.transform = `translate(${this.ghostBase[0]}px, ${this.ghostBase[1]}px)`;
+        (this.joyEl.firstChild as HTMLElement).style.transform = `translate(${mx * 40}px, ${my * 40}px)`;
+      } else this.joyEl.style.display = 'none';
+      return;
+    }
     if (j.active && !this.bot) {
       this.joyEl.style.display = 'block';
       this.joyEl.style.transform = `translate(${j.ox}px, ${j.oy}px)`;
@@ -292,15 +310,18 @@ export class PlayScreen {
     const hs = this.hintState; const sim = this.sim; const p = sim.player;
     if (this.input.joy.everMoved && !hs.moved) { hs.moved = true; track('tutorial_step', { step: 'move', t: Math.round(this.run.time) }); }
     let text = ''; let wx = p.x, wy = p.y - 120; let showHand = false;
-    const tut = this.o.tutorial && !this.bot;
+    const human = !this.bot || !!this.o.ghostThumb;
+    const tut = this.o.tutorial && human;
     if (tut && !hs.moved && this.paused === 'none') { text = t('hint.drag'); showHand = true; wy = p.y + 30; }
     else if (tut && hs.moved && !hs.fired && p.moving && sim.state === 'fight' && this.run.time > 1.5) { text = t('hint.stop'); }
     else if (tut && sim.state === 'fight' && this.run.roomIndex === 0) {
       const c = sim.cocoons.find((cc) => !cc.freed);
-      if (c && Math.hypot(c.x - p.x, c.y - p.y) < 380 && !hs.rescueShown && hs.fired) { text = t('hint.rescue'); wx = c.x; wy = c.y - 110; if (this.run.time > 25) hs.rescueShown = true; }
+      // point at the cocoon until the player starts washing it (or for 6 s), then get out of the way
+      if (c && c.hp < c.maxHp) hs.rescueShown = true;
+      if (c && Math.hypot(c.x - p.x, c.y - p.y) < 380 && !hs.rescueShown && hs.fired) { text = t('hint.rescue'); wx = c.x; wy = c.y - 110; hs.rescueTime += dt; if (hs.rescueTime > 6) hs.rescueShown = true; }
     }
-    if (!text && sim.state === 'fight' && !p.moving && !p.firing && p.stillTime > 1.2 && this.o.firstRuns < 4 && !this.bot) { text = t('hint.range'); hs.rangeShown += dt; }
-    if (!text && sim.gateOpen && sim.state === 'clear' && this.o.firstRuns < 3 && !this.bot) {
+    if (!text && sim.state === 'fight' && !p.moving && !p.firing && p.stillTime > 1.2 && this.o.firstRuns < 4 && human) { text = t('hint.range'); hs.rangeShown += dt; }
+    if (!text && sim.gateOpen && sim.state === 'clear' && this.o.firstRuns < 3 && human) {
       hs.idleTime += p.moving ? 0 : dt;
       if (hs.idleTime > 2.2 && sim.cocoonsLeft() === 0) { text = t('hint.gate'); wx = ROOM.width / 2; wy = ROOM.wall + 150; }
     }

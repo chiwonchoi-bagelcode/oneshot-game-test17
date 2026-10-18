@@ -128,7 +128,6 @@
  "gun.5": "Water Cannon",
  "gun.6": "Mega Cannon",
  "gun.evolved": "Your water gun evolved!",
- "gun.evolvedDesc": "The stream is thicker and reaches farther.",
  "region.forest": "Sunny Forest",
  "region.village": "Windmill Village",
  "region.lake": "Sparkle Lake",
@@ -296,5 +295,9 @@
  "festival.next": "Weekend festival every Sat & Sun: coins ×{x}",
  "result.festival": "Weekend festival ×{x}",
  "time.dh": "{d}d {h}h",
- "festival.pill": "Festival ×{x}"
+ "festival.pill": "Festival ×{x}",
+ "evolve.dmg": "Damage +{v}%",
+ "evolve.width": "Width +{v}%",
+ "evolve.splash": "Splash +{v}%",
+ "evolve.range": "Range +{v}"
 }

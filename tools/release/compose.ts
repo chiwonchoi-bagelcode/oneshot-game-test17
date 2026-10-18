@@ -167,6 +167,40 @@ function feature(title: string, sub: string): string {
   return c.toDataURL('image/png');
 }
 
+// ------------------------------------------------------------------ trailer end card (1080x1920, time t in seconds)
+function endCard(t: number): string {
+  seed = 41;
+  const [c, ctx] = canvas(1080, 1920); ctx.scale(3, 3); // 360x640 layout
+  const bg = ctx.createLinearGradient(0, 0, 0, 640); bg.addColorStop(0, '#5cc4ff'); bg.addColorStop(0.55, '#d4f3ff');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, 360, 640);
+  ctx.save(); ctx.translate(180, 190); ctx.rotate(t * 0.25); ctx.globalAlpha = 0.6; draw(ctx, 'fx_rays', 0, 0, 2.6); ctx.restore();
+  // meadow
+  ctx.save(); ctx.beginPath(); ctx.ellipse(180, 900, 420, 420, 0, 0, 7); ctx.clip();
+  for (let y = 470; y < 640; y += 48) for (let x = -48; x < 400; x += 48) drawTile(ctx, `g_${Math.floor(rnd() * 3)}`, x, y, 48);
+  ctx.restore();
+  // logo pops in
+  const k = Math.min(1, t / 0.4); const pop = k < 1 ? 1 - Math.pow(1 - k, 3) * Math.cos(k * 7) : 1;
+  ctx.save(); ctx.translate(180, 170); ctx.scale(pop, pop);
+  outlinedText(ctx, '물총 구조대', 0, 0, 66, "'Jua', 'Fredoka', sans-serif", '#ffffff', '#2a62b8', 6, 8);
+  outlinedText(ctx, 'Splash Rescue', 0, 48, 30, "'Fredoka', 'Jua', sans-serif", '#ffe27a', '#b05a10', 4, 4);
+  ctx.restore();
+  // the kid cheering with the friends hopping around
+  const crew: [string, number, number, number][] = [['a_puppy_happy', 78, 548, 0], ['a_bunny_happy', 128, 590, 0.4], ['a_fox_happy', 236, 592, 0.8], ['a_kitten_happy', 288, 548, 1.2], ['a_otter_happy', 40, 610, 1.6], ['a_duckling_happy', 324, 612, 2.0]];
+  for (const [n, x, y, ph] of crew) {
+    const hop = Math.abs(Math.sin(t * 5 + ph)) * 14; const f = Math.floor(t * 8 + ph * 3) % 3;
+    draw(ctx, 'shadow', x, y, 0.9, false, 0, 0.4); draw(ctx, `${n}_${f}`, x, y - hop, 1.25, x > 180);
+  }
+  draw(ctx, 'shadow', 180, 560, 1.5, false, 0, 0.45);
+  draw(ctx, `kid_win_${Math.floor(t * 8) % 4}`, 180, 566, 1.9);
+  // water drops and confetti falling
+  for (let i = 0; i < 26; i++) {
+    const x = (i * 97) % 360, sp = 60 + (i * 37) % 70, y = ((i * 53) % 640 + t * sp) % 700 - 40;
+    draw(ctx, i % 3 === 0 ? 'p_water' : `p_conf_${i % 5}`, x, y, 1.2, false, t * 2 + i);
+  }
+  return c.toDataURL('image/jpeg', 0.92);
+}
+(window as unknown as { __endcard: (t: number) => string }).__endcard = endCard;
+
 async function main() {
   await loadAtlases(() => {});
   await document.fonts.load("100px 'Jua'"); await document.fonts.load("44px 'Fredoka'");

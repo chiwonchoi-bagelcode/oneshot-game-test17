@@ -87,6 +87,7 @@ button { font-family: inherit; color: inherit; }
 .fade.on { opacity: 1; }
 .joy { position: fixed; left: 0; top: 0; width: 0; height: 0; display: none; pointer-events: none !important; }
 .joy::before { content: ''; position: absolute; left: -60px; top: -60px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255, 255, 255, .16); border: 4px solid rgba(255, 255, 255, .65); box-shadow: 0 0 0 2px rgba(58, 36, 22, .25); }
+.joy.ghost .joy-knob::after { content: ''; position: absolute; left: 6px; top: 14px; width: 54px; height: 76px; border-radius: 27px 27px 22px 22px; background: rgba(255, 224, 196, .82); border: 3px solid rgba(58, 36, 22, .45); }
 .joy-knob { position: absolute; left: -28px; top: -28px; width: 56px; height: 56px; border-radius: 50%; background: rgba(255, 255, 255, .9); border: 3px solid rgba(58, 36, 22, .6); }
 
 .ribbon { position: fixed; left: 50%; top: 27%; transform: translate(-50%, -50%) scale(.5); opacity: 0; text-align: center; pointer-events: none !important; transition: opacity .2s, transform .35s cubic-bezier(.3, 1.6, .5, 1); width: max-content; max-width: calc(100vw - 32px); }
@@ -364,6 +365,11 @@ button { font-family: inherit; color: inherit; }
 .fest-left { font-size: 17px; color: var(--ink2); margin: -4px 0 14px; }
 .evolve-row { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .evolve-old { opacity: .7; }
+.evolve-glow { position: relative; display: inline-flex; isolation: isolate; }
+.evolve-glow::before { content: ''; position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; margin: -110px 0 0 -110px; border-radius: 50%; z-index: -1; background: repeating-conic-gradient(rgba(255, 226, 110, .7) 0 9deg, rgba(255, 226, 110, 0) 9deg 30deg); -webkit-mask: radial-gradient(circle, #000 25%, transparent 68%); mask: radial-gradient(circle, #000 25%, transparent 68%); animation: spin 7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.evolve-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; }
+.evolve-stat { padding: 4px 10px; border-radius: 12px; background: #e3f4ff; border: 2px solid #8cc6ef; font-size: 16px; font-weight: 700; color: #2a62b8; white-space: nowrap; }
 .evolve-new { animation: popIn .6s cubic-bezier(.3, 1.8, .5, 1); filter: drop-shadow(0 0 12px rgba(120, 210, 255, .9)); }
 .evolve-name { font-size: 28px; font-weight: 700; }
 .evolve-desc { font-size: 17px; color: var(--ink2); }

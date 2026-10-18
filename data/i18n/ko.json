@@ -128,7 +128,6 @@
  "gun.5": "물대포",
  "gun.6": "거대 물대포",
  "gun.evolved": "물총이 진화했어요!",
- "gun.evolvedDesc": "물줄기가 더 굵고 멀리 나가요.",
  "region.forest": "햇살 숲",
  "region.village": "풍차 마을",
  "region.lake": "반짝 호수",
@@ -156,7 +155,7 @@
  "shelter.collect": "선물 받기",
  "shelter.giftReady": "선물 {n}코인",
  "shelter.giftNone": "선물을 모으는 중",
- "shelter.giftRate": "시간당 {n}코인 · 최대 {h}시간",
+ "shelter.giftRate": "시간당 {n} · 최대 {h}시간",
  "shelter.bond": "친밀도 {n}",
  "shelter.bondNext": "{n}번 더 구하면 친밀도 업",
  "shelter.bondMax": "친밀도 최고!",
@@ -296,5 +295,9 @@
  "festival.next": "토·일요일엔 주말 축제: 코인 ×{x}",
  "result.festival": "주말 축제 ×{x}",
  "time.dh": "{d}일 {h}시간",
- "festival.pill": "축제 ×{x}"
+ "festival.pill": "축제 ×{x}",
+ "evolve.dmg": "피해 +{v}%",
+ "evolve.width": "굵기 +{v}%",
+ "evolve.splash": "물보라 +{v}%",
+ "evolve.range": "사거리 +{v}"
 }

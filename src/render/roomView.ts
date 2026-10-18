@@ -1,5 +1,6 @@
 // Draws a RoomSim: ground, goo layer (washed away by events), y-sorted
 // sprites, the water stream, effects and droplets. Visual only.
+import { visualWidth } from './streamLook';
 import { GUN_TIERS, MONSTER_RULES, ROOM } from '../config/balance';
 import { draw, drawFrame, frame, point, type Frame } from '../engine/atlas';
 import { quality } from '../engine/quality';
@@ -179,9 +180,10 @@ export class RoomView {
         break;
       }
       case 'rescue': {
-        fx.spawn('fx_rays', e.x, e.y - 20, { max: 1.1, scale: 0.5, scale1: 1.1, alpha: 0.9, vr: 0.6, additive: quality().glow });
-        fx.spawn(['fx_splash_0', 'fx_splash_1', 'fx_splash_2', 'fx_splash_3', 'fx_splash_4', 'fx_splash_5'], e.x, e.y + 10, { fps: 14, max: 0.45, scale: 1.6 });
-        for (let i = 0; i < 10; i++) fx.spawn('p_heart', e.x, e.y - 20, { z: 10, vz: r.range(120, 280), vx: r.range(-140, 140), vy: r.range(-60, 30), g: 260, max: r.range(0.9, 1.4), scale: r.range(0.7, 1.2), drag: 1 });
+        // the light and the cocoon's splash stay low; the freed animal itself is drawn on top (drawHeroes)
+        fx.spawn('fx_rays', e.x, e.y - 10, { max: 1.1, scale: 0.5, scale1: 1.0, alpha: 0.85, vr: 0.6, additive: quality().glow, ground: true });
+        fx.spawn(['fx_splash_0', 'fx_splash_1', 'fx_splash_2', 'fx_splash_3', 'fx_splash_4', 'fx_splash_5'], e.x, e.y + 14, { fps: 14, max: 0.45, scale: 1.05, ground: true });
+        for (let i = 0; i < 10; i++) fx.spawn('p_heart', e.x, e.y - 50, { z: 10, vz: r.range(120, 280), vx: r.range(-140, 140), vy: r.range(-60, 30), g: 260, max: r.range(0.9, 1.4), scale: r.range(0.7, 1.2), drag: 1 });
         for (let i = 0; i < 12; i++) fx.spawn('p_goo_violet', e.x, e.y - 10, { z: 20, vz: r.range(150, 350), vx: r.range(-220, 220), vy: r.range(-120, 120), g: 900, max: 0.8, drag: 1.2 });
         for (let i = 0; i < 6; i++) fx.spawn(['p_sparkle_0', 'p_sparkle_1', 'p_sparkle_2'], e.x + r.range(-40, 40), e.y + r.range(-60, 10), { fps: 8, max: 0.6, scale: r.range(1, 1.6) });
         this.slowmo = 0.45;
@@ -331,6 +333,7 @@ export class RoomView {
     this.drawSorted(ctx);
     this.drawStreams(ctx);
     this.fx.draw(ctx, false);
+    this.drawHeroes(ctx);
     this.drawBullets(ctx);
     this.fx.drawTexts(ctx, this.font);
     // screen-space overlays
@@ -414,7 +417,7 @@ export class RoomView {
     for (const s of this.statics) buf.push({ y: s.sortY, k: 0, o: s });
     for (const m of sim.monsters) if (m.alive) buf.push({ y: m.y + m.r * 0.5, k: 1, o: m });
     for (const c of sim.cocoons) if (!c.freed) buf.push({ y: c.y + 20, k: 2, o: c });
-    for (const f of sim.followers) buf.push({ y: f.y, k: 3, o: f });
+    for (const f of sim.followers) if (f.joy <= 0) buf.push({ y: f.y, k: 3, o: f });
     buf.push({ y: sim.player.y, k: 4, o: sim.player });
     buf.sort((a, b) => a.y - b.y);
     for (const it of buf) {
@@ -505,6 +508,20 @@ export class RoomView {
     draw(ctx, 'mk_help', c.x + 28, c.y - 52 + bob, 1.0);
   }
 
+  // A just-freed animal pops out of its cocoon above every effect: a big hop,
+  // a squash-and-stretch and a soft glow, so the reward is the thing you see.
+  private drawHeroes(ctx: CanvasRenderingContext2D) {
+    for (const f of this.sim.followers) {
+      if (f.joy <= 0) continue;
+      const k = Math.min(1, 1 - f.joy / 1.1); // 0 → 1 over the joy time
+      const hop = k < 0.6 ? Math.sin((k / 0.6) * Math.PI) * 54 : Math.abs(Math.sin((k - 0.6) * 16)) * 10;
+      const pop = 1 + 0.4 * Math.max(0, 1 - k * 1.6);
+      const sq = k < 0.08 ? 1 - k * 3 : 1; // squash on the way out
+      draw(ctx, 'fx_glow', f.x, f.y - 26 - hop, 0.9 * pop, false, 0, 0.75 * (1 - k * 0.7));
+      draw(ctx, `a_${f.species}_happy_${Math.floor(this.time * 10) % 3}`, f.x, f.y + 4 - hop, 0.88 * pop, f.facing < 0, 0, 1, 1 / sq, sq);
+    }
+  }
+
   private drawFollower(ctx: CanvasRenderingContext2D, f: RoomSim['followers'][number]) {
     let name: string; let lift = 0;
     const id = f.idx * 1.7;
@@ -569,10 +586,10 @@ export class RoomView {
       const nx = -(y1 - y0) / len, ny = (x1 - x0) / len;
       const wob = Math.sin(t * 9 + s.kind) * Math.min(6, len * 0.02);
       const cx = (x0 + x1) / 2 + nx * wob, cy = (y0 + y1) / 2 + ny * wob + len * 0.05;
-      const w = s.w;
+      const w = visualWidth(s.w);
       ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       const path = () => { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(cx, cy, x1, y1); };
-      if (q.glow) { path(); ctx.strokeStyle = `rgba(140,220,255,${0.22 + pr * 0.18})`; ctx.lineWidth = w * 2.1; ctx.stroke(); }
+      if (q.glow) { path(); ctx.strokeStyle = `rgba(140,220,255,${0.22 + pr * 0.18})`; ctx.lineWidth = w * 1.8; ctx.stroke(); }
       path(); ctx.strokeStyle = 'rgba(28,98,170,0.9)'; ctx.lineWidth = w + 3; ctx.stroke();
       path(); ctx.strokeStyle = pr >= 1 ? '#8fe2ff' : '#55c2f5'; ctx.lineWidth = w; ctx.stroke();
       path(); ctx.strokeStyle = 'rgba(210,245,255,0.95)'; ctx.lineWidth = w * 0.5; ctx.stroke();
@@ -582,7 +599,7 @@ export class RoomView {
         ctx.setLineDash([]);
       }
       // nozzle puff
-      if (s.kind !== 2) { ctx.fillStyle = 'rgba(235,250,255,0.9)'; ctx.beginPath(); ctx.arc(x0, y0, w * 0.6, 0, Math.PI * 2); ctx.fill(); }
+      if (s.kind !== 2) { ctx.fillStyle = 'rgba(235,250,255,0.9)'; ctx.beginPath(); ctx.arc(x0, y0, Math.min(w * 0.6, 16), 0, Math.PI * 2); ctx.fill(); }
       ctx.restore();
       if (s.hit) {
         const f = Math.floor(t * 20 + s.kind) % 4;

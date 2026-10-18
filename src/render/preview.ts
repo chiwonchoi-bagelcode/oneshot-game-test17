@@ -1,6 +1,7 @@
 // Small live scene used on the upgrade and result screens: the rescuer sprays
 // a goo blob with the current stream. Width, reach and gun follow the real
 // stats, so every upgrade is visible right away.
+import { visualWidth } from './streamLook';
 import { draw, point } from '../engine/atlas';
 import { Particles } from './particles';
 
@@ -74,7 +75,7 @@ export class StreamPreview {
     const [mx, my] = point(gun, 'muzzle'); const kk = S * (1 + 0.04 * this.tier) / 2;
     const x0 = hx + Math.cos(aim) * mx * kk - Math.sin(aim) * my * kk, y0 = hy + Math.sin(aim) * mx * kk + Math.cos(aim) * my * kk;
     const x1 = bx - 10, y1 = by - 18;
-    const w = this.shownW * (1 + this.pulse * 0.6);
+    const w = visualWidth(this.shownW * (1 + this.pulse * 0.6));
     const path = () => { g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + 8 + Math.sin(this.t * 8) * 3, x1, y1); };
     g.lineCap = 'round';
     path(); g.strokeStyle = 'rgba(140,220,255,0.35)'; g.lineWidth = w * 2; g.stroke();
