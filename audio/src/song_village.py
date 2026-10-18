@@ -46,11 +46,11 @@ def build():
     acc.seq(s.bar(C), MEL_C, v=88, gate=0.82)
 
     cl = s.track("clarinet", 71, pan=-0.25, humanize_ms=6, vel_jitter=5)
-    cl.seq(s.bar(A2), MEL_A2, v=90, gate=0.85, transpose=-12)
-    cl.seq(s.bar(C), MEL_C, v=76, gate=0.85, transpose=-12)
+    cl.seq(s.bar(A2), MEL_A2, v=90, gate=0.85, transpose=-12, expr=True)
+    cl.seq(s.bar(C), MEL_C, v=76, gate=0.85, transpose=-12, expr=True)
 
     hm = s.track("harmonica", 22, pan=-0.05, humanize_ms=8, vel_jitter=4)
-    hm.seq(s.bar(B), MEL_B, v=84, gate=0.95)
+    hm.seq(s.bar(B), MEL_B, v=84, gate=0.95, expr=True)
 
     # "pah" off-beats: pizzicato in A and C, mandolin tremolo in B
     pz = s.track("pizz", 45, pan=-0.35, humanize_ms=4, vel_jitter=6)

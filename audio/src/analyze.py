@@ -193,3 +193,21 @@ def contact_sheet(items, path, cols=4, cell=(330, 170)):
             h = int(a * 14)
         sheet.paste(im.resize((W, H)), ((i % cols) * W, (i // cols) * H))
     sheet.save(path)
+
+
+def seam_vs_downbeats(y, bars):
+    """Loop the file twice and compare the >6 kHz energy in a 6 ms window at the seam with the
+    same measure at every other bar downbeat (a click would rank at ~100th percentile)."""
+    y = as2d(y)
+    L = y.shape[0]
+    yy = np.vstack([y, y])
+    sos = sps.butter(4, 6000, btype="highpass", fs=SR, output="sos")
+    e = np.sum(sps.sosfiltfilt(sos, yy, axis=0) ** 2, axis=1)
+    w = int(0.006 * SR)
+
+    def win(c):
+        return np.mean(e[c - w // 2:c + w // 2])
+
+    seam = win(L)
+    others = np.array([win(int(round(L + k * L / bars))) for k in range(1, bars)])
+    return float(np.mean(others < seam) * 100), float(10 * np.log10(seam / np.median(others)))

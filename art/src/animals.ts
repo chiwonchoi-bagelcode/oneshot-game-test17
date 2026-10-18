@@ -359,5 +359,14 @@ export function register() {
       drawAnimal(ctx, name, { mood: 'happy', mouth: 'smile', earUp: 0.5 });
     });
   }
+  // silhouettes for friends not met yet (same pose as the portrait)
+  for (const name of Object.keys(SPECIES)) {
+    sprite(`sil_${name}`, 120, 120, 60, 60, (ctx) => {
+      ctx.save(); ctx.translate(58, 112); ctx.scale(1.05, 1.05);
+      drawAnimal(ctx, name, { mood: 'normal', mouth: 'smile' }); ctx.restore();
+      ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = '#6b5a7e'; ctx.fillRect(0, 0, 120, 120);
+      ctx.globalCompositeOperation = 'source-over';
+    });
+  }
   void ARng; void gloss; void lighten;
 }

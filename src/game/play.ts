@@ -268,6 +268,7 @@ export class PlayScreen {
       case 'roomClear': {
         audio.play('room_clear', { vol: 0.9 }); buzz('success');
         this.announce(t('toast.clean'), '', 'clean');
+        if (!this.sim.hitThisRoom) run.noHitRooms++;
         track('room_clear', { stage: run.stage, room: run.roomIndex, seconds: Math.round(run.time - this.roomStart), hit: this.sim.hitThisRoom });
         if (run.stage === 1 && run.roomIndex === 0 && this.o.tutorial) track('tutorial_step', { step: 'first_room', t: Math.round(run.time) });
         break;
@@ -377,6 +378,7 @@ export class PlayScreen {
     });
     const body = h('div', { class: 'levelup' }, h('div', { class: 'levelup-sub' }, t('levelup.pick')), ...cards);
     openModal(body, { id: 'levelup', title: t('levelup.title'), titleIcon: 'p_star', closable: false, cls: 'modal-levelup' });
+    if (this.bot) setTimeout(() => { ready = true; pick(this.bot!.chooseSkill(choices, this.sim.player.hp / this.run.stats.maxHp)); }, 900);
     void xpToNext;
   }
 

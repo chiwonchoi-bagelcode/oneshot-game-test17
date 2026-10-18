@@ -330,6 +330,71 @@ function leaf(ctx: Ctx) {
   cel(ctx, p, { x: -10, y: -8, w: 20, h: 12 }, '#f2a33a', '#c97a1f', null, { outline: OUTW * 0.6 });
 }
 
+function windmill(ctx: Ctx) {
+  const tower = new Path2D(); tower.moveTo(-34, 0); tower.lineTo(-24, -150); tower.lineTo(24, -150); tower.lineTo(34, 0); tower.closePath();
+  cel(ctx, tower, { x: -34, y: -150, w: 68, h: 150 }, '#fff1d6', '#e3c79c', '#fffaf0', { texture: 0.5, seed: 4 });
+  const door = rrectPath(-10, -36, 20, 36, 8); cel(ctx, door, { x: -10, y: -36, w: 20, h: 36 }, PAL.wood, PAL.woodDark, null);
+  const win = ellipsePath(0, -100, 8, 9); cel(ctx, win, { x: -8, y: -109, w: 16, h: 18 }, '#8fe4ff', '#3ab0e0', null, { outline: 2 });
+  const roof = new Path2D(); roof.moveTo(-32, -146); roof.lineTo(0, -186); roof.lineTo(32, -146); roof.closePath(); cel(ctx, roof, { x: -32, y: -186, w: 64, h: 40 }, '#ef6a4f', '#b9433a', '#ff9c84');
+  ctx.save(); ctx.translate(0, -150);
+  for (let i = 0; i < 4; i++) {
+    ctx.save(); ctx.rotate(i * Math.PI / 2 + 0.3);
+    const b = new Path2D(); b.moveTo(-4, 0); b.lineTo(-10, -86); b.lineTo(12, -86); b.lineTo(4, 0); b.closePath();
+    cel(ctx, b, { x: -10, y: -86, w: 22, h: 86 }, '#fff6e2', '#d8c3a5', null, { outline: OUTW * 0.85 });
+    ctx.strokeStyle = rgba(PAL.woodDark, 0.7); ctx.lineWidth = 1.5; for (let y = -76; y < -10; y += 12) { ctx.beginPath(); ctx.moveTo(-8, y); ctx.lineTo(10, y); ctx.stroke(); }
+    ctx.restore();
+  }
+  const hub = ellipsePath(0, 0, 9, 9); cel(ctx, hub, { x: -9, y: -9, w: 18, h: 18 }, PAL.wood, PAL.woodDark, null);
+  ctx.restore();
+}
+
+function mapNode(ctx: Ctx, boss: boolean) {
+  const r = boss ? 40 : 32;
+  const side = ellipsePath(0, 6, r, r * 0.62); cel(ctx, side, { x: -r, y: 6 - r * 0.62, w: r * 2, h: r * 1.24 }, PAL.stoneDark, '#5d6670', null);
+  const top = ellipsePath(0, 0, r, r * 0.62); cel(ctx, top, { x: -r, y: -r * 0.62, w: r * 2, h: r * 1.24 }, PAL.stoneLight, PAL.stone, '#eef2f4', { texture: 0.5, seed: boss ? 3 : 2 });
+}
+
+function flag(ctx: Ctx) {
+  const pole = rrectPath(-3, -64, 6, 66, 3); cel(ctx, pole, { x: -3, y: -64, w: 6, h: 66 }, PAL.wood, PAL.woodDark, null, { outline: 2 });
+  const f = new Path2D(); f.moveTo(3, -62); f.quadraticCurveTo(22, -58, 40, -62); f.lineTo(34, -48); f.lineTo(40, -34); f.quadraticCurveTo(22, -38, 3, -34); f.closePath();
+  cel(ctx, f, { x: 3, y: -62, w: 37, h: 28 }, '#7ed957', '#4fae3a', '#c4f5a0', { outline: 2.4 });
+  const d = new Path2D(); d.moveTo(18, -56); d.bezierCurveTo(21, -52, 24, -49, 24, -46); d.arc(18, -46, 6, 0, Math.PI); d.bezierCurveTo(12, -49, 15, -52, 18, -56); d.closePath();
+  ctx.fillStyle = '#ffffff'; ctx.fill(d);
+}
+
+function signBoard(ctx: Ctx) {
+  for (const x of [-70, 70]) { const p = rrectPath(x - 6, -70, 12, 72, 4); cel(ctx, p, { x: x - 6, y: -70, w: 12, h: 72 }, PAL.wood, PAL.woodDark, null, { outline: 2.4 }); }
+  const b = rrectPath(-110, -120, 220, 64, 14); cel(ctx, b, { x: -110, y: -120, w: 220, h: 64 }, PAL.woodLight, PAL.wood, '#f0c08a', { texture: 0.5, seed: 9 });
+  ctx.strokeStyle = rgba(PAL.woodDark, 0.6); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-100, -88); ctx.lineTo(100, -88); ctx.stroke();
+}
+
+function shelterHouse(ctx: Ctx) {
+  const wall = rrectPath(-150, -170, 300, 170, 10);
+  cel(ctx, wall, { x: -150, y: -170, w: 300, h: 170 }, '#ffd99a', '#e0b06a', '#fff0cc', { texture: 0.5, seed: 12 });
+  ctx.save(); ctx.clip(wall); ctx.strokeStyle = rgba('#b07a3a', 0.6); ctx.lineWidth = 3; for (let x = -140; x < 150; x += 26) { ctx.beginPath(); ctx.moveTo(x, -170); ctx.lineTo(x, 0); ctx.stroke(); } ctx.restore();
+  const door = new Path2D(); door.moveTo(-42, 0); door.lineTo(-42, -80); door.quadraticCurveTo(0, -122, 42, -80); door.lineTo(42, 0); door.closePath();
+  cel(ctx, door, { x: -42, y: -112, w: 84, h: 112 }, '#c98a52', '#9c6534', '#e8b07a');
+  ctx.strokeStyle = OUT; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, -100); ctx.lineTo(0, 0); ctx.stroke();
+  for (const x of [-110, 76]) { const w = rrectPath(x, -138, 36, 34, 6); cel(ctx, w, { x, y: -138, w: 36, h: 34 }, '#8fe4ff', '#3ab0e0', '#e0f8ff', { gloss: true }); ctx.fillStyle = OUT; ctx.fillRect(x + 17, -138, 2.5, 34); ctx.fillRect(x, -122, 36, 2.5);
+    const box = rrectPath(x - 4, -104, 44, 14, 4); cel(ctx, box, { x: x - 4, y: -104, w: 44, h: 14 }, PAL.wood, PAL.woodDark, null, { outline: 2 });
+    ctx.fillStyle = '#ff9ec4'; for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x + 4 + k * 10, -106, 4, 0, 7); ctx.fill(); } }
+  const roof = new Path2D(); roof.moveTo(-178, -156); roof.lineTo(-120, -262); roof.lineTo(120, -262); roof.lineTo(178, -156); roof.closePath();
+  cel(ctx, roof, { x: -178, y: -262, w: 356, h: 106 }, '#7ed957', '#4fae3a', '#c4f5a0', { so: [-30, -20], texture: 0.6, seed: 13 });
+  ctx.save(); ctx.clip(roof); ctx.strokeStyle = rgba('#3f8a2a', 0.6); ctx.lineWidth = 3; for (let y = -250; y < -156; y += 18) { ctx.beginPath(); ctx.moveTo(-190, y); ctx.lineTo(190, y); ctx.stroke(); } ctx.restore();
+  // paw sign on the roof
+  const sign = ellipsePath(0, -214, 34, 30); cel(ctx, sign, { x: -34, y: -244, w: 68, h: 60 }, '#fff6e2', '#e3c79c', null);
+  ctx.fillStyle = '#c9783f'; ctx.strokeStyle = OUT; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, -204, 11, 9, 0, 0, 7); ctx.fill(); ctx.stroke();
+  for (const [x, y] of [[-13, -218], [-4, -224], [5, -224], [14, -218]]) { ctx.beginPath(); ctx.ellipse(x, y, 4.2, 5, 0, 0, 7); ctx.fill(); ctx.stroke(); }
+}
+
+function basket(ctx: Ctx) {
+  const b = new Path2D(); b.moveTo(-36, -24); b.lineTo(36, -24); b.quadraticCurveTo(34, 4, 0, 6); b.quadraticCurveTo(-34, 4, -36, -24); b.closePath();
+  cel(ctx, b, { x: -36, y: -24, w: 72, h: 30 }, '#d9a46a', '#b47b47', '#ebc28d', { texture: 0.8, seed: 21 });
+  ctx.save(); ctx.clip(b); ctx.strokeStyle = rgba('#8a5a32', 0.6); ctx.lineWidth = 2; for (let x = -34; x < 36; x += 8) { ctx.beginPath(); ctx.moveTo(x, -24); ctx.lineTo(x + 4, 6); ctx.stroke(); } ctx.restore();
+  const c = ellipsePath(0, -24, 34, 9); cel(ctx, c, { x: -34, y: -33, w: 68, h: 18 }, '#ffb3c6', '#e488a0', '#ffd6df', { outline: 2.2 });
+}
+
 // ---------------------------------------------------------------- gate
 function gatePosts(ctx: Ctx) {
   for (const x of [-100, 100]) {
@@ -376,6 +441,13 @@ export function register() {
   ob('border_pine', 130, 190, 178, (c) => pine(c, 5));
   ob('border_bush', 120, 90, 78, (c) => bush(c, 9));
   ob('gate_posts', 280, 200, 180, gatePosts);
+  ob('ob_windmill', 210, 300, 280, windmill);
+  ob('mp_node', 96, 70, 40, (c) => mapNode(c, false));
+  ob('mp_node_boss', 110, 84, 48, (c) => mapNode(c, true));
+  ob('mp_flag', 60, 80, 74, flag);
+  ob('mp_sign', 250, 140, 130, signBoard);
+  ob('sh_house', 380, 290, 280, shelterHouse);
+  ob('sh_basket', 90, 50, 40, basket);
   const fl = ['#ffffff', '#ffe066', '#ff9ec4', '#a8d8ff', '#ffb36b'];
   fl.forEach((c, i) => ob(`d_flower_${i}`, 40, 40, 34, (cx) => flower(cx, c)));
   ob('d_tuft', 40, 40, 34, tuft);

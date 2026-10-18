@@ -42,6 +42,7 @@ export interface RunState {
   bestCombo: number;
   daily: boolean;
   cleanSum: number;
+  noHitRooms: number;
 }
 
 export function createRun(level: LevelDef, meta: MetaPower, opts: { known: SpeciesId[]; seed: number; mods?: RunMods; revives: number; daily?: boolean }): RunState {
@@ -52,7 +53,7 @@ export function createRun(level: LevelDef, meta: MetaPower, opts: { known: Speci
     coins: 0, rescued: [], washed: 0, roomsCleared: 0,
     hp: stats.maxHp, revives: opts.revives, shield: false, hits: 0, dmgBy: {}, pressureFulls: 0,
     meta, stats, time: 0, mods: opts.mods ?? NO_MODS, known: opts.known.slice(), seed: opts.seed,
-    rng: new Rng(opts.seed ^ 0x5bd1e995), bestCombo: 0, daily: !!opts.daily, cleanSum: 0,
+    rng: new Rng(opts.seed ^ 0x5bd1e995), bestCombo: 0, daily: !!opts.daily, cleanSum: 0, noHitRooms: 0,
   };
 }
 

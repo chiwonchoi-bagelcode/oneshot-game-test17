@@ -57,6 +57,7 @@ async function boot() {
   loading.classList.add('done');
   setTimeout(() => loading.remove(), 500);
   app.start();
+  if (__DEV__) { const dbg = await import('./debug/panel'); dbg.initDebug(app); }
   const sessionStart = Date.now();
   window.addEventListener('pagehide', () => { save().stats.playSeconds += Math.round((Date.now() - sessionStart) / 1000); markDirty(); flush(); track('session_end', { seconds: Math.round((Date.now() - sessionStart) / 1000) }); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });

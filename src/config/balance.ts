@@ -267,7 +267,7 @@ export const UNLOCKS = {
   shelter: 0, // after the first run that rescued an animal
   missions: 2, // stage number that must be cleared
   daily: 3,
-  decor: 3, // species count
+  decor: 5, // species count
 };
 
 export const STREAK_REWARDS: Array<{ coins?: number; species?: SpeciesId }> = [

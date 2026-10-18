@@ -97,12 +97,12 @@ def stinger_fail():
     pz.chord(1.0, 0.4, ["c4", "f4", "ab4"], 64)
     pz.chord(1.5, 0.8, ["c4", "e4", "g4"], 70)
     st = s.track("strings", 49, pan=0.2, humanize_ms=0)
-    st.chord(0.0, 1.0, ["c3", "g3", "e4"], 54)
-    st.chord(1.0, 0.5, ["c3", "f3", "ab3"], 54)
-    st.chord(1.5, 2.2, ["c3", "g3", "e4"], 56)
+    st.chord(0.0, 1.0, ["g3", "c4", "e4"], 54)
+    st.chord(1.0, 0.5, ["ab3", "c4", "f4"], 54)
+    st.chord(1.5, 2.2, ["g3", "c4", "e4"], 56)
     bs = s.track("bass", 32)
-    bs.note(0.0, 1.0, "c2", 80)
-    bs.note(1.5, 2.0, "c2", 76)
+    bs.note(0.0, 1.0, "c3", 70)
+    bs.note(1.5, 2.0, "c3", 66)
     gl = s.track("glock", 9, pan=0.35)
     gl.note(2.6, 1.5, "g5", 56)
     gl.note(2.85, 1.5, "c6", 64)
@@ -110,8 +110,8 @@ def stinger_fail():
         "clarinet": dict(level=0.0, hpf=180, rev=0.35),
         "marimba": dict(level=-6.0, hpf=200, rev=0.3),
         "pizz": dict(level=-7.0, hpf=150, rev=0.3),
-        "strings": dict(level=-10.0, hpf=120, lpf=6000, rev=0.4),
-        "bass": dict(level=-10.0, hpf=35, lpf=1500, rev=0.05),
+        "strings": dict(level=-11.0, hpf=150, lpf=6000, rev=0.4),
+        "bass": dict(level=-15.0, hpf=60, lpf=1500, rev=0.05),
         "glock": dict(level=-7.0, hpf=600, rev=0.45, high_shelf=(8000, -3.0)),
     }
     return _finish(s, settings, dict(rev_rt60=1.5, rev_level_db=-4.0), 2.6, 0.6)

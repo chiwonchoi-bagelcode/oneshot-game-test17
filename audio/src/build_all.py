@@ -54,7 +54,7 @@ def m100(x):
 
 def analyze():
     import importlib
-    from analyze import seam_metrics, spectrogram_log_png, contact_sheet, pianoroll_png
+    from analyze import seam_metrics, seam_vs_downbeats, spectrogram_log_png, contact_sheet, pianoroll_png
     import render_music
     import sfx
 
@@ -68,15 +68,17 @@ def analyze():
         song, _, _ = mod.build()
         e = ffmpeg_ebur128(mp3)
         sm = seam_metrics(y)
+        db_pct, db_rel = seam_vs_downbeats(y, song.bars)
         meas["music"][name] = {
             "duration_s": round(y.shape[0] / SR, 3), "samples": int(y.shape[0]),
             "expected_samples": song.length_samples, "bpm": song.bpm, "bars": song.bars,
             "lufs_I": e["I"], "true_peak_dBTP": e["TP"], "sample_peak_dBFS": round(sample_peak_db(y), 2),
             "seam_jump_ratio": round(sm["jump_ratio"], 3), "seam_hf_percentile": round(sm["seam_hf_percentile"], 1),
+            "seam_vs_downbeats_pct": round(db_pct, 0), "seam_vs_downbeats_db": round(db_rel, 1),
             "size_kB": round(os.path.getsize(mp3) / 1024, 1),
         }
         manifest["music"][name] = {"file": name + ".mp3", "duration": round(y.shape[0] / SR, 4),
-                                   "bpm": song.bpm, "loop": True}
+                                   "bpm": song.bpm, "loop": True, "samples": int(y.shape[0])}
         pianoroll_png(song, os.path.join(REVIEW_DIR, name + "_arrangement.png"))
     for name in STINGERS:
         mp3 = os.path.join(OUT_DIR, name + ".mp3")
@@ -87,7 +89,7 @@ def analyze():
             "sample_peak_dBFS": round(sample_peak_db(y), 2), "size_kB": round(os.path.getsize(mp3) / 1024, 1)}
         bpm = {"stinger_clear": 132, "stinger_fail": 100, "stinger_evolve": 120}[name]
         manifest["music"][name] = {"file": name + ".mp3", "duration": round(y.shape[0] / SR, 4), "bpm": bpm,
-                                   "loop": False}
+                                   "loop": False, "samples": int(y.shape[0])}
     # ---- sfx ----------------------------------------------------------------
     sheet = []
     for name in sfx.SFX:
@@ -110,7 +112,14 @@ def analyze():
         manifest["sfx"][name] = {"file": name + ".mp3", "duration": round(len(y) / SR, 4)}
         if name in sfx.LOOPS:
             manifest["sfx"][name]["loop"] = True
+            manifest["sfx"][name]["samples"] = int(len(y))
         sheet.append((name, y))
+    manifest["format"] = {
+        "sampleRate": SR, "codec": "mp3 (LAME CBR 96 kbps), music/stingers stereo, sfx mono",
+        "gapless": "Xing/LAME header carries encoder delay (576) + padding; gapless decoders (ffmpeg, "
+                   "Chrome, Firefox) return exactly `samples`. If a decoder returns more, the audio starts "
+                   "1105 samples (25.06 ms) late: loop from loopStart = 1105/44100 for `duration` seconds.",
+    }
     with open(os.path.join(OUT_DIR, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2)
     total = sum(os.path.getsize(os.path.join(OUT_DIR, f)) for f in os.listdir(OUT_DIR))
@@ -143,14 +152,15 @@ def analyze():
 
 def write_tables(meas):
     L = []
-    L.append("| file | dur (s) | BPM | LUFS-I | true peak (dBTP) | loop seam jump ratio | seam HF pct | size (kB) |")
-    L.append("|---|---|---|---|---|---|---|---|")
+    L.append("| file | dur (s) | samples | BPM | LUFS-I | true peak (dBTP) | seam jump ratio | "
+             "seam HF pct (random) | seam HF pct (downbeats) | size (kB) |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|")
     for n, m in meas["music"].items():
-        L.append("| %s.mp3 | %.2f | %d | %.1f | %.1f | %.3f | %.0f | %.0f |" % (
-            n, m["duration_s"], m["bpm"], m["lufs_I"], m["true_peak_dBTP"], m["seam_jump_ratio"],
-            m["seam_hf_percentile"], m["size_kB"]))
+        L.append("| %s.mp3 | %.2f | %d | %d | %.1f | %.1f | %.3f | %.0f | %.0f | %.0f |" % (
+            n, m["duration_s"], m["samples"], m["bpm"], m["lufs_I"], m["true_peak_dBTP"], m["seam_jump_ratio"],
+            m["seam_hf_percentile"], m["seam_vs_downbeats_pct"], m["size_kB"]))
     for n, m in meas["stingers"].items():
-        L.append("| %s.mp3 | %.2f | - | %.1f | %.1f | (no loop) | - | %.0f |" % (
+        L.append("| %s.mp3 | %.2f | - | - | %.1f | %.1f | (no loop) | - | - | %.0f |" % (
             n, m["duration_s"], m["lufs_I"], m["true_peak_dBTP"], m["size_kB"]))
     L.append("")
     L.append("| sfx | dur (s) | sample peak (dBFS) | true peak (dBTP) | max 100 ms loudness (LUFS) | "

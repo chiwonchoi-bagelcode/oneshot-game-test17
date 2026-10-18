@@ -1,7 +1,1143 @@
 "use strict";
 (() => {
+  var __defProp = Object.defineProperty;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+
+  // src/engine/quality.ts
+  function quality() {
+    return PRESETS[level];
+  }
+  function qualityLevel() {
+    return level;
+  }
+  function setQuality(l) {
+    if (l === level) return;
+    level = l;
+    for (const f of listeners) f();
+  }
+  function onQualityChange(f) {
+    listeners.push(f);
+  }
+  function defaultQuality() {
+    const mem = navigator.deviceMemory ?? 4;
+    const cores = navigator.hardwareConcurrency ?? 4;
+    if (mem <= 2 || cores <= 2) return "low";
+    if (mem >= 6 && cores >= 6 && !/Android|iPhone|iPad/i.test(navigator.userAgent)) return "high";
+    return "medium";
+  }
+  var PRESETS, level, listeners;
+  var init_quality = __esm({
+    "src/engine/quality.ts"() {
+      "use strict";
+      PRESETS = {
+        low: { dprCap: 1, particles: 140, streamFx: false, bgScale: 1, fpsCap: 30, shake: true, glow: false },
+        medium: { dprCap: 1.75, particles: 320, streamFx: true, bgScale: 1.5, fpsCap: 60, shake: true, glow: true },
+        high: { dprCap: 2.5, particles: 600, streamFx: true, bgScale: 2, fpsCap: 60, shake: true, glow: true }
+      };
+      level = "medium";
+      listeners = [];
+    }
+  });
+
+  // src/meta/save.ts
+  function newSave() {
+    return {
+      v: SAVE_VERSION,
+      installId: Math.random().toString(36).slice(2) + Date.now().toString(36),
+      createdAt: Date.now(),
+      coins: 0,
+      coinsEarned: 0,
+      upgrades: { power: 0, range: 0, health: 0, pressure: 0, splash: 0 },
+      rescued: {},
+      seen: [],
+      cleared: {},
+      attempts: {},
+      decor: [],
+      giftsAt: Date.now(),
+      streak: { day: 0, lastDate: "", claimedToday: false, consecutive: 0 },
+      missions: { date: "", ids: [], progress: [], claimed: [], allClaimed: false },
+      daily: { date: "", cleared: false, streak: 0, lastClearDate: "" },
+      stats: { runs: 0, wins: 0, washed: 0, rooms: 0, playSeconds: 0, sessions: 0, lastSession: 0 },
+      flags: {},
+      settings: { music: 0.7, sfx: 0.9, vibration: true, lang: "auto", quality: "auto", contrast: false },
+      dayOffset: 0,
+      lastStage: 1
+    };
+  }
+  function save() {
+    return data;
+  }
+  function loadSave() {
+    let fresh = true;
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        data = migrate(parsed);
+        fresh = false;
+      }
+    } catch {
+      data = newSave();
+    }
+    return { data, fresh };
+  }
+  function migrate(p) {
+    const base = newSave();
+    const out = { ...base, ...p };
+    out.upgrades = { ...base.upgrades, ...p.upgrades || {} };
+    out.settings = { ...base.settings, ...p.settings || {} };
+    out.stats = { ...base.stats, ...p.stats || {} };
+    out.streak = { ...base.streak, ...p.streak || {} };
+    out.daily = { ...base.daily, ...p.daily || {} };
+    out.missions = { ...base.missions, ...p.missions || {} };
+    out.flags = { ...p.flags || {} };
+    out.v = SAVE_VERSION;
+    return out;
+  }
+  function markDirty() {
+    dirty = true;
+    if (!timer) timer = window.setTimeout(flush, 400);
+  }
+  function flush() {
+    timer = 0;
+    if (!dirty) return;
+    dirty = false;
+    try {
+      localStorage.setItem(KEY, JSON.stringify(data));
+    } catch {
+    }
+    for (const f of listeners4) f(data);
+  }
+  function resetSave() {
+    const keepSettings = data.settings;
+    data = newSave();
+    data.settings = keepSettings;
+    dirty = true;
+    flush();
+  }
+  function replaceSave(d) {
+    data = migrate(d);
+    dirty = true;
+    flush();
+  }
+  function today(offsetDays = data.dayOffset) {
+    const d = new Date(Date.now() + offsetDays * 864e5);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function nowMs() {
+    return Date.now() + data.dayOffset * 864e5;
+  }
+  function daysBetween(a, b) {
+    if (!a || !b) return 999;
+    const pa = a.split("-").map(Number), pb = b.split("-").map(Number);
+    const da = Date.UTC(pa[0], pa[1] - 1, pa[2]), db = Date.UTC(pb[0], pb[1] - 1, pb[2]);
+    return Math.round((db - da) / 864e5);
+  }
+  var KEY, SAVE_VERSION, data, dirty, timer, listeners4;
+  var init_save = __esm({
+    "src/meta/save.ts"() {
+      "use strict";
+      KEY = "splash-rescue-save";
+      SAVE_VERSION = 1;
+      data = newSave();
+      dirty = false;
+      timer = 0;
+      listeners4 = [];
+    }
+  });
+
+  // src/services/analytics.ts
+  function initAnalytics(installId, session, build) {
+    ctx.installId = installId;
+    ctx.session = session;
+    ctx.build = build;
+  }
+  function track(name, params = {}) {
+    ctx.t = Date.now();
+    for (const p of providers) {
+      try {
+        p.track(name, params, ctx);
+      } catch {
+      }
+    }
+  }
+  var DebugBuffer, RemotePlaceholder, debugBuffer, remote, providers, ctx;
+  var init_analytics = __esm({
+    "src/services/analytics.ts"() {
+      "use strict";
+      DebugBuffer = class {
+        constructor() {
+          this.name = "debug";
+          this.events = [];
+        }
+        track(name, params, ctx2) {
+          this.events.push({ name, params, t: ctx2.t });
+          if (this.events.length > 300) this.events.shift();
+          if (true) console.debug("[analytics]", name, params);
+        }
+      };
+      RemotePlaceholder = class {
+        constructor() {
+          this.name = "remote";
+          this.queue = [];
+        }
+        track(name, params, ctx2) {
+          this.queue.push({ name, params, ctx: ctx2 });
+          if (this.queue.length > 500) this.queue.shift();
+        }
+      };
+      debugBuffer = new DebugBuffer();
+      remote = new RemotePlaceholder();
+      providers = [debugBuffer, remote];
+      ctx = { installId: "", session: 0, t: 0, build: "1.0.0" };
+    }
+  });
+
+  // src/config/balance.ts
+  function xpToNext(level2) {
+    const n = level2 - 1;
+    return Math.round(6 + 6 * n + 1.4 * n * n);
+  }
+  function stageScale(stage) {
+    const s = Math.max(1, stage) - 1;
+    const hp = 0.62 * Math.pow(1.092, s) * (1 + 0.015 * s);
+    const dmg = 0.5 + 0.06 * s + 12e-4 * s * s;
+    const coin = 1 + 0.12 * s;
+    return { hp, dmg, coin };
+  }
+  function niceRound(v) {
+    if (v < 100) return Math.round(v / 5) * 5;
+    if (v < 1e3) return Math.round(v / 10) * 10;
+    if (v < 1e4) return Math.round(v / 50) * 50;
+    return Math.round(v / 100) * 100;
+  }
+  function upgradeCost(def, level2) {
+    return niceRound(def.base * Math.pow(def.growth, level2));
+  }
+  function gunTierFor(totalLevels) {
+    let t2 = 0;
+    for (let i = 0; i < GUN_TIERS.length; i++) if (totalLevels >= GUN_TIERS[i].at) t2 = i;
+    return t2;
+  }
+  function skillWeight(def, stacks, hpRatio) {
+    if (def.id === "heal") return hpRatio < 0.8 ? 9 + (1 - hpRatio) * 12 : 0;
+    if (stacks >= def.max) return 0;
+    return def.weight;
+  }
+  function bondLevel(count) {
+    let lv = 0;
+    for (let i = 0; i < BOND_THRESHOLDS.length; i++) if (count >= BOND_THRESHOLDS[i]) lv = i + 1;
+    return lv;
+  }
+  var ROOM, PLAYER, RESCUE, MONSTERS, MONSTER_RULES, STAGE_COUNT, REWARDS, UPGRADES, GUN_TIERS, SKILLS, SKILL_VALUES, SPECIES, BOND_THRESHOLDS, GIFTS, DECOR, UNLOCKS, STREAK_REWARDS, STREAK_AFTER_WEEK, MISSIONS, MISSIONS_PER_DAY, MISSION_ALL_BONUS, DAILY, ASSIST;
+  var init_balance = __esm({
+    "src/config/balance.ts"() {
+      "use strict";
+      ROOM = {
+        width: 576,
+        height: 960,
+        tile: 48,
+        wall: 48,
+        // border thickness that frames the play area
+        gateWidth: 110
+      };
+      PLAYER = {
+        maxHp: 100,
+        radius: 20,
+        moveSpeed: 255,
+        accel: 2600,
+        gooSlow: 0.62,
+        // speed multiplier while standing on goo
+        invuln: 0.9,
+        dps: 34,
+        range: 250,
+        streamWidth: 12,
+        streamSpeed: 2600,
+        // how fast a fresh stream reaches its target
+        fireDelay: 0.05,
+        // seconds after stopping before water comes out
+        aimTurnRate: 16,
+        pressureCharge: 1.1,
+        // seconds standing still to reach full pressure
+        pressureMax: 1.8,
+        // damage multiplier at full pressure
+        pressureWidth: 0.6,
+        // extra width fraction at full pressure
+        pressureDrainMove: 5,
+        // per second while moving
+        pressureKeepOnHit: 0.25,
+        pickupRadius: 64,
+        streamClean: 0.75,
+        // goo cleaned along the stream = width * this
+        impactClean: 24,
+        burstClean: 66,
+        burstDamage: 0.25,
+        // fraction of dps dealt instantly around a washed monster
+        burstRadius: 70,
+        reviveHp: 0.6,
+        revivesPerRun: 1
+      };
+      RESCUE = {
+        cheerDamagePerAnimal: 0.06,
+        cheerMaxAnimals: 6,
+        healOnRescue: 0.1,
+        // of max hp
+        braveRescueCoins: 8,
+        // rescued while monsters are still around
+        rescueCoins: 10,
+        rescueXp: 3,
+        cocoonHp: 55,
+        cocoonRadius: 30
+      };
+      MONSTERS = {
+        blob: { r: 26, hp: 40, speed: 74, contact: 12, xp: 2, coins: 2 },
+        spitter: { r: 26, hp: 52, speed: 34, contact: 10, xp: 3, coins: 3, cooldown: 2.6, telegraph: 0.65, bulletSpeed: 200, bulletDmg: 13, bulletR: 13 },
+        splitter: { r: 31, hp: 58, speed: 60, contact: 12, xp: 3, coins: 3 },
+        mini: { r: 17, hp: 18, speed: 108, contact: 8, xp: 1, coins: 1 },
+        dasher: { r: 26, hp: 55, speed: 60, contact: 16, xp: 3, coins: 3, cooldown: 1.5, telegraph: 0.8 },
+        chunky: { r: 44, hp: 210, speed: 42, contact: 18, xp: 8, coins: 8, cooldown: 3.6, telegraph: 0.85, bulletSpeed: 190, bulletDmg: 14, bulletR: 14 },
+        nest: { r: 40, hp: 240, speed: 0, contact: 10, xp: 8, coins: 8, cooldown: 4.2, telegraph: 0.7 },
+        jumper: { r: 28, hp: 70, speed: 50, contact: 14, xp: 4, coins: 4, cooldown: 2.9, telegraph: 0.75, bulletDmg: 18 },
+        flyer: { r: 22, hp: 44, speed: 95, contact: 11, xp: 3, coins: 3, cooldown: 3.2, telegraph: 0.5, bulletSpeed: 170, bulletDmg: 11, bulletR: 12 },
+        boss: { r: 78, hp: 1700, speed: 55, contact: 22, xp: 30, coins: 60, cooldown: 2.2, telegraph: 0.9, bulletSpeed: 200, bulletDmg: 15, bulletR: 15 }
+      };
+      MONSTER_RULES = {
+        spawnRise: 0.6,
+        // seconds rising from the ground, harmless
+        roomStartDelay: 0.9,
+        // grace time when entering a room
+        waveDelay: 1.1,
+        dashSpeed: 560,
+        dashTime: 0.5,
+        jumpTime: 0.7,
+        jumpShock: 64,
+        nestMaxChildren: 3,
+        chunkyRing: 8,
+        hopMove: 0.46,
+        hopRest: 0.32,
+        minScale: 0.55
+        // monsters shrink to this as they get washed
+      };
+      STAGE_COUNT = 30;
+      REWARDS = {
+        roomClearCoins: 6,
+        // times coin scale
+        stageFirstClear: (stage) => 60 + 25 * stage,
+        stageReplayClear: (stage) => 20 + 6 * stage,
+        starCoins: 30,
+        coinDropSpread: 0.25,
+        healDropChance: 0.06,
+        // chance a washed monster drops a heart-shaped water drop
+        healDropAmount: 0.12
+      };
+      UPGRADES = [
+        { id: "power", max: 40, base: 40, growth: 1.2, per: 0.12 },
+        { id: "range", max: 20, base: 50, growth: 1.24, per: 0.05 },
+        { id: "health", max: 30, base: 40, growth: 1.2, per: 0.1 },
+        { id: "pressure", max: 15, base: 70, growth: 1.3, per: 0.05 },
+        { id: "splash", max: 20, base: 60, growth: 1.27, per: 0.1 }
+      ];
+      GUN_TIERS = [
+        { at: 0, dmg: 1, width: 1, splash: 1, range: 0 },
+        { at: 3, dmg: 1.12, width: 1.32, splash: 1.15, range: 10 },
+        { at: 8, dmg: 1.25, width: 1.62, splash: 1.3, range: 20 },
+        { at: 15, dmg: 1.42, width: 1.95, splash: 1.5, range: 35 },
+        { at: 25, dmg: 1.62, width: 2.35, splash: 1.72, range: 50 },
+        { at: 38, dmg: 1.85, width: 2.8, splash: 1.95, range: 70 },
+        { at: 55, dmg: 2.15, width: 3.5, splash: 2.3, range: 100 }
+      ];
+      SKILLS = [
+        { id: "thick", max: 5, weight: 10 },
+        { id: "range", max: 3, weight: 7 },
+        { id: "multi", max: 2, weight: 7 },
+        { id: "pierce", max: 2, weight: 6 },
+        { id: "chain", max: 2, weight: 6 },
+        { id: "splash", max: 3, weight: 7 },
+        { id: "turbo", max: 3, weight: 7 },
+        { id: "keep", max: 2, weight: 5 },
+        { id: "speed", max: 3, weight: 6 },
+        { id: "shield", max: 3, weight: 6 },
+        { id: "trail", max: 3, weight: 5 },
+        { id: "magnet", max: 2, weight: 4 },
+        { id: "vitality", max: 4, weight: 6 },
+        { id: "heal", max: 99, weight: 0 }
+        // offered when hurt, see skillWeight
+      ];
+      SKILL_VALUES = {
+        thickDmg: 0.22,
+        thickWidth: 0.15,
+        rangeAdd: 0.18,
+        multiDmg: 0.55,
+        pierceDmg: 0.7,
+        chainDmg: 0.5,
+        chainRange: 150,
+        splashDmg: 0.6,
+        splashRadius: 0.25,
+        turboCharge: 0.45,
+        turboMax: 0.2,
+        keepDrain: 0.55,
+        speedAdd: 0.12,
+        speedGoo: 0.12,
+        shieldRegen: [9, 7, 5.5],
+        trailEvery: 0.28,
+        trailDmg: 0.35,
+        trailRadius: 34,
+        magnetRadius: 0.8,
+        magnetXp: 0.15,
+        vitalityHp: 0.2,
+        vitalityHeal: 0.2,
+        heal: 0.4
+      };
+      SPECIES = [
+        { id: "puppy", bonus: "maxHp", per: 0.05, region: "forest" },
+        { id: "bunny", bonus: "move", per: 0.03, region: "forest" },
+        { id: "squirrel", bonus: "coins", per: 0.06, region: "forest" },
+        { id: "fox", bonus: "damage", per: 0.04, region: "forest" },
+        { id: "hedgehog", bonus: "armor", per: 0.03, region: "forest" },
+        { id: "fawn", bonus: "range", per: 0.03, region: "forest" },
+        { id: "kitten", bonus: "charge", per: 0.05, region: "village" },
+        { id: "duckling", bonus: "xp", per: 0.06, region: "village" },
+        { id: "piglet", bonus: "gifts", per: 0.1, region: "village" },
+        { id: "lamb", bonus: "rescueHeal", per: 0.15, region: "village" },
+        { id: "chick", bonus: "splash", per: 0.05, region: "village" },
+        { id: "otter", bonus: "pickup", per: 0.08, region: "lake" },
+        { id: "turtle", bonus: "revive", per: 0.08, region: "lake" },
+        { id: "frog", bonus: "gooWalk", per: 0.05, region: "lake" },
+        { id: "penguin", bonus: "pressureMax", per: 0.03, region: "special" },
+        { id: "panda", bonus: "all", per: 0.02, region: "special" }
+      ];
+      BOND_THRESHOLDS = [1, 3, 6, 10, 15];
+      GIFTS = {
+        perSpeciesPerHour: 6,
+        bondBonus: 0.15,
+        // per bond level above 1
+        capHours: 8,
+        minCollect: 1
+      };
+      DECOR = [
+        { id: "ball", cost: 150, giftBonus: 0.1 },
+        { id: "cushion", cost: 300, giftBonus: 0.1 },
+        { id: "bowl", cost: 500, giftBonus: 0.1 },
+        { id: "flowers", cost: 800, giftBonus: 0.1 },
+        { id: "pond", cost: 1200, giftBonus: 0.1 },
+        { id: "treehouse", cost: 1800, giftBonus: 0.1 },
+        { id: "slide", cost: 2600, giftBonus: 0.1 },
+        { id: "fountain", cost: 3600, giftBonus: 0.1 }
+      ];
+      UNLOCKS = {
+        upgrades: 0,
+        // after the first run ends
+        shelter: 0,
+        // after the first run that rescued an animal
+        missions: 2,
+        // stage number that must be cleared
+        daily: 3,
+        decor: 5
+        // species count
+      };
+      STREAK_REWARDS = [
+        { coins: 100 },
+        { species: "penguin" },
+        { coins: 200 },
+        { coins: 300 },
+        { species: "panda" },
+        { coins: 400 },
+        { coins: 600 }
+      ];
+      STREAK_AFTER_WEEK = 250;
+      MISSIONS = [
+        { id: "wash", target: 40, coins: 80 },
+        { id: "rescue", target: 3, coins: 90 },
+        { id: "rooms", target: 8, coins: 80 },
+        { id: "pressure", target: 15, coins: 70 },
+        { id: "clear", target: 2, coins: 100 },
+        { id: "gifts", target: 1, coins: 60 },
+        { id: "nohit", target: 3, coins: 90 }
+      ];
+      MISSIONS_PER_DAY = 3;
+      MISSION_ALL_BONUS = 150;
+      DAILY = {
+        rooms: 4,
+        firstClearCoins: 400,
+        replayCoins: 60,
+        // stage difficulty used for the daily: highest cleared stage, at least this
+        minStage: 3
+      };
+      ASSIST = {
+        // after this many failed attempts in a row on a stage, offer a helper boost
+        failsBeforeHelp: 2,
+        helpHp: 0.3,
+        helpDamage: 0.2
+      };
+    }
+  });
+
+  // src/sim/rng.ts
+  function hashString(s) {
+    let h2 = 2166136261;
+    for (let i = 0; i < s.length; i++) {
+      h2 ^= s.charCodeAt(i);
+      h2 = Math.imul(h2, 16777619);
+    }
+    return h2 >>> 0;
+  }
+  var Rng;
+  var init_rng = __esm({
+    "src/sim/rng.ts"() {
+      "use strict";
+      Rng = class {
+        constructor(seed) {
+          this.s = seed >>> 0 || 1;
+        }
+        next() {
+          let t2 = this.s += 1831565813;
+          t2 = Math.imul(t2 ^ t2 >>> 15, t2 | 1);
+          t2 ^= t2 + Math.imul(t2 ^ t2 >>> 7, t2 | 61);
+          return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
+        }
+        range(a, b) {
+          return a + (b - a) * this.next();
+        }
+        int(a, b) {
+          return Math.floor(this.range(a, b + 1));
+        }
+        pick(arr) {
+          return arr[Math.floor(this.next() * arr.length)];
+        }
+        chance(p) {
+          return this.next() < p;
+        }
+      };
+    }
+  });
+
+  // src/sim/stats.ts
+  function upgradeTotal(up) {
+    let t2 = 0;
+    for (const d of UPGRADES) t2 += up[d.id] || 0;
+    return t2;
+  }
+  function bondBonus(meta, kind) {
+    let v = 0;
+    for (const s of SPECIES) {
+      const lv = meta.bonds[s.id] || 0;
+      if (!lv) continue;
+      if (s.bonus === kind) v += s.per * lv;
+      if (s.bonus === "all" && (kind === "damage" || kind === "maxHp" || kind === "coins")) v += s.per * lv;
+    }
+    return v;
+  }
+  function per(id) {
+    return UPGRADES.find((u) => u.id === id).per;
+  }
+  function computeStats(meta, skills, cheer) {
+    const up = meta.upgrades;
+    const tier = gunTierFor(upgradeTotal(up));
+    const T4 = GUN_TIERS[tier];
+    const sk = (id) => skills[id] || 0;
+    const dmgMul = (1 + per("power") * (up.power || 0)) * T4.dmg * (1 + bondBonus(meta, "damage")) * (1 + SKILL_VALUES.thickDmg * sk("thick")) * (meta.assist ? 1 + ASSIST.helpDamage : 1);
+    const cheerMul = 1 + RESCUE.cheerDamagePerAnimal * Math.min(cheer, RESCUE.cheerMaxAnimals);
+    const hpMul = (1 + per("health") * (up.health || 0)) * (1 + bondBonus(meta, "maxHp")) * (1 + SKILL_VALUES.vitalityHp * sk("vitality")) * (meta.assist ? 1 + ASSIST.helpHp : 1);
+    const rangeMul = (1 + per("range") * (up.range || 0)) * (1 + bondBonus(meta, "range")) * (1 + SKILL_VALUES.rangeAdd * sk("range"));
+    const splashMul = (1 + per("splash") * (up.splash || 0)) * T4.splash * (1 + bondBonus(meta, "splash"));
+    const shield = sk("shield");
+    return {
+      maxHp: Math.round(PLAYER.maxHp * hpMul),
+      moveSpeed: PLAYER.moveSpeed * (1 + bondBonus(meta, "move")) * (1 + SKILL_VALUES.speedAdd * sk("speed")),
+      gooSlow: Math.min(0.95, PLAYER.gooSlow + SKILL_VALUES.speedGoo * sk("speed") + bondBonus(meta, "gooWalk")),
+      dps: PLAYER.dps * dmgMul * cheerMul,
+      range: (PLAYER.range + T4.range) * rangeMul,
+      width: PLAYER.streamWidth * T4.width * (1 + 0.05 * (up.power || 0)) * (1 + SKILL_VALUES.thickWidth * sk("thick")),
+      pressureCharge: PLAYER.pressureCharge / ((1 + per("pressure") * (up.pressure || 0)) * (1 + bondBonus(meta, "charge")) * (1 + SKILL_VALUES.turboCharge * sk("turbo"))),
+      pressureMax: (PLAYER.pressureMax + per("pressure") * (up.pressure || 0) + SKILL_VALUES.turboMax * sk("turbo")) * (1 + bondBonus(meta, "pressureMax")),
+      pressureDrain: PLAYER.pressureDrainMove * Math.pow(1 - SKILL_VALUES.keepDrain, sk("keep")),
+      invuln: PLAYER.invuln,
+      pickupRadius: PLAYER.pickupRadius * (1 + bondBonus(meta, "pickup")) * (1 + SKILL_VALUES.magnetRadius * sk("magnet")),
+      burstRadius: PLAYER.burstRadius * Math.sqrt(splashMul) * (1 + SKILL_VALUES.splashRadius * sk("splash")),
+      burstDmg: PLAYER.burstDamage * splashMul * (1 + SKILL_VALUES.splashDmg * sk("splash")),
+      burstClean: PLAYER.burstClean * Math.sqrt(splashMul) * (1 + SKILL_VALUES.splashRadius * sk("splash")),
+      armor: Math.max(0.5, 1 - bondBonus(meta, "armor")),
+      xpMult: (1 + bondBonus(meta, "xp")) * (1 + SKILL_VALUES.magnetXp * sk("magnet")),
+      coinMult: 1 + bondBonus(meta, "coins"),
+      multi: sk("multi"),
+      pierce: sk("pierce"),
+      chain: sk("chain"),
+      shieldRegen: shield ? SKILL_VALUES.shieldRegen[Math.min(shield, 3) - 1] : 0,
+      trail: sk("trail"),
+      rescueHeal: RESCUE.healOnRescue * (1 + bondBonus(meta, "rescueHeal")),
+      reviveHp: Math.min(1, PLAYER.reviveHp + bondBonus(meta, "revive")),
+      gunTier: tier,
+      cheerPer: RESCUE.cheerDamagePerAnimal
+    };
+  }
+  var init_stats = __esm({
+    "src/sim/stats.ts"() {
+      "use strict";
+      init_balance();
+    }
+  });
+
+  // src/meta/progress.ts
+  function bonds() {
+    const out = {};
+    for (const s of SPECIES) {
+      const lv = bondLevel(save().rescued[s.id] || 0);
+      if (lv) out[s.id] = lv;
+    }
+    return out;
+  }
+  function metaPower(assist = false) {
+    return { upgrades: { ...save().upgrades }, bonds: bonds(), assist };
+  }
+  function knownSpecies() {
+    return SPECIES.filter((s) => (save().rescued[s.id] || 0) > 0).map((s) => s.id);
+  }
+  function gunTier() {
+    return gunTierFor(upgradeTotal(save().upgrades));
+  }
+  function isCleared(stage) {
+    return !!save().cleared[`s${stage}`];
+  }
+  function highestCleared() {
+    let h2 = 0;
+    for (let s = 1; s <= STAGE_COUNT; s++) if (isCleared(s)) h2 = s;
+    return h2;
+  }
+  function stageUnlocked(stage) {
+    return stage === 1 || isCleared(stage - 1) || isCleared(stage);
+  }
+  function nextStage() {
+    return Math.min(STAGE_COUNT, highestCleared() + 1);
+  }
+  function assistOffered(stage) {
+    const a = save().attempts[`s${stage}`];
+    return !!a && a.failsInRow >= ASSIST.failsBeforeHelp && !isCleared(stage);
+  }
+  function featureOpen(f) {
+    const s = save();
+    switch (f) {
+      case "upgrades":
+        return s.stats.runs >= 1;
+      case "shelter":
+        return knownSpecies().length > 0 && s.stats.runs >= 1;
+      case "missions":
+        return highestCleared() >= UNLOCKS.missions;
+      case "daily":
+        return highestCleared() >= UNLOCKS.daily;
+      case "decor":
+        return knownSpecies().length >= UNLOCKS.decor;
+    }
+  }
+  function pendingUnlocks() {
+    const s = save();
+    const out = [];
+    for (const f of ["upgrades", "shelter", "missions", "daily", "decor"]) {
+      if (featureOpen(f) && !s.flags[`unlock_${f}`]) out.push(f);
+    }
+    return out;
+  }
+  function markAnnounced(f) {
+    save().flags[`unlock_${f}`] = true;
+    markDirty();
+    track("feature_unlock", { feature: f });
+  }
+  function earn(amount, source) {
+    if (amount <= 0) return;
+    const s = save();
+    s.coins += amount;
+    s.coinsEarned += amount;
+    markDirty();
+    track("currency_earn", { source, amount, balance: s.coins });
+  }
+  function spend(amount, sink, item) {
+    const s = save();
+    if (s.coins < amount) return false;
+    s.coins -= amount;
+    markDirty();
+    track("currency_spend", { sink, item, amount, balance: s.coins });
+    return true;
+  }
+  function upgradeInfo(id) {
+    const def = UPGRADES.find((u) => u.id === id);
+    const lv = save().upgrades[id] || 0;
+    return { def, lv, maxed: lv >= def.max, cost: lv >= def.max ? 0 : upgradeCost(def, lv) };
+  }
+  function buyUpgrade(id) {
+    const info = upgradeInfo(id);
+    const tierBefore = gunTier();
+    if (info.maxed || !spend(info.cost, "upgrade", id)) return { ok: false, tierBefore, tierAfter: tierBefore };
+    save().upgrades[id] = info.lv + 1;
+    markDirty();
+    track("upgrade_buy", { id, level: info.lv + 1, cost: info.cost });
+    const tierAfter = gunTier();
+    if (tierAfter > tierBefore) track("gun_evolve", { tier: tierAfter });
+    return { ok: true, tierBefore, tierAfter };
+  }
+  function featureUpgradeOpen(id) {
+    const h2 = highestCleared();
+    const runs = save().stats.runs;
+    switch (id) {
+      case "power":
+        return runs >= 1;
+      case "health":
+        return runs >= 1;
+      case "range":
+        return h2 >= 1 || runs >= 3;
+      case "pressure":
+        return h2 >= 2;
+      case "splash":
+        return h2 >= 3;
+    }
+  }
+  function upgradeUnlockStage(id) {
+    return id === "range" ? 1 : id === "pressure" ? 2 : id === "splash" ? 3 : 0;
+  }
+  function applyRun(run, result, seconds, deathSource, daily) {
+    const s = save();
+    const stage = run.stage;
+    const key = `s${stage}`;
+    const before = { ...s.rescued };
+    const firstClear = result === "clear" && !daily && !isCleared(stage);
+    let bonus = 0;
+    let bonusKind = null;
+    if (result === "clear") {
+      if (daily) {
+        const first = !s.daily.cleared;
+        bonus = first ? DAILY.firstClearCoins : DAILY.replayCoins;
+        bonusKind = "daily";
+        if (first) {
+          s.daily.cleared = true;
+          s.daily.streak = daysBetween(s.daily.lastClearDate, today()) === 1 ? s.daily.streak + 1 : 1;
+          s.daily.lastClearDate = today();
+        }
+      } else if (firstClear) {
+        bonus = REWARDS.stageFirstClear(stage);
+        bonusKind = "first";
+      } else {
+        bonus = REWARDS.stageReplayClear(stage);
+        bonusKind = "replay";
+      }
+    }
+    const coinsRun = run.coins;
+    earn(coinsRun, daily ? "daily_run" : "run");
+    if (bonus) earn(bonus, daily ? "daily" : "clear_bonus");
+    const newSpecies = [];
+    const bondUps = [];
+    for (const sp of run.rescued) {
+      if (!(s.rescued[sp] || 0) && !newSpecies.includes(sp)) newSpecies.push(sp);
+      s.rescued[sp] = (s.rescued[sp] || 0) + 1;
+    }
+    for (const sp of new Set(run.rescued)) {
+      const a = bondLevel(before[sp] || 0), b = bondLevel(s.rescued[sp] || 0);
+      if (b > a) bondUps.push({ species: sp, from: a, to: b, count: s.rescued[sp] || 0 });
+    }
+    if (!daily) {
+      const at = s.attempts[key] ?? { tries: 0, failsInRow: 0 };
+      at.tries++;
+      at.failsInRow = result === "clear" ? 0 : at.failsInRow + (result === "fail" ? 1 : 0);
+      s.attempts[key] = at;
+      if (result === "clear") {
+        const c = s.cleared[key] ?? { best: 0, clears: 0, stars: 0 };
+        c.clears++;
+        c.best = c.best ? Math.min(c.best, seconds) : seconds;
+        const allAnimals = run.level.rooms.reduce((n, r) => n + r.animals.length, 0);
+        const stars = 1 + (run.rescued.length >= allAnimals ? 1 : 0) + (run.hits === 0 ? 1 : 0);
+        c.stars = Math.max(c.stars, stars);
+        s.cleared[key] = c;
+        if (firstClear) {
+          track("stage_first_clear", { stage, attempts: at.tries });
+          track("level_reached", { stage: stage + 1 });
+        }
+        if (firstClear && stage === 1) track("tutorial_complete", { seconds: Math.round((Date.now() - s.createdAt) / 1e3) });
+        s.lastStage = Math.min(STAGE_COUNT, stage + 1);
+      } else s.lastStage = stage;
+    }
+    s.stats.runs++;
+    if (result === "clear") s.stats.wins++;
+    s.stats.washed += run.washed;
+    s.stats.rooms += run.roomsCleared;
+    const done = [];
+    const bump = (id, n) => {
+      const d = bumpMission(id, n);
+      if (d) done.push(d);
+    };
+    bump("wash", run.washed);
+    bump("rescue", run.rescued.length);
+    bump("rooms", run.roomsCleared);
+    bump("pressure", run.pressureFulls);
+    bump("nohit", run.noHitRooms);
+    if (result === "clear") bump("clear", 1);
+    markDirty();
+    return {
+      result,
+      stage,
+      coinsRun,
+      bonus,
+      bonusKind,
+      total: coinsRun + bonus,
+      rescued: run.rescued.slice(),
+      newSpecies,
+      bondUps,
+      washed: run.washed,
+      rooms: run.roomsCleared,
+      totalRooms: run.level.rooms.length,
+      seconds,
+      firstClear,
+      tierBefore: gunTier(),
+      missionsDone: done,
+      deathSource
+    };
+  }
+  function bondProgress(sp) {
+    const n = save().rescued[sp] || 0;
+    const lv = bondLevel(n);
+    const next = BOND_THRESHOLDS[lv];
+    return { count: n, lv, next: next ?? null, toNext: next ? next - n : 0, maxed: lv >= BOND_THRESHOLDS.length };
+  }
+  function refreshDay() {
+    const s = save();
+    const d = today();
+    let newDay = false;
+    if (s.missions.date !== d) {
+      const r = new Rng(hashString(d + s.installId));
+      const pool = MISSIONS.map((m) => m.id).filter((id) => id !== "gifts" || featureOpen("shelter"));
+      const ids = [];
+      while (ids.length < MISSIONS_PER_DAY && pool.length) {
+        const i = Math.floor(r.next() * pool.length);
+        ids.push(pool.splice(i, 1)[0]);
+      }
+      s.missions = { date: d, ids, progress: ids.map(() => 0), claimed: ids.map(() => false), allClaimed: false };
+      newDay = true;
+    }
+    if (s.daily.date !== d) {
+      s.daily.date = d;
+      s.daily.cleared = false;
+    }
+    if (s.streak.lastDate !== d) {
+      const gap = daysBetween(s.streak.lastDate, d);
+      s.streak.consecutive = gap === 1 ? s.streak.consecutive + 1 : 1;
+      s.streak.day += 1;
+      s.streak.lastDate = d;
+      s.streak.claimedToday = false;
+      newDay = true;
+    }
+    markDirty();
+    return { newDay };
+  }
+  function missionDef(id) {
+    return MISSIONS.find((m) => m.id === id);
+  }
+  function bumpMission(id, n) {
+    const s = save();
+    const i = s.missions.ids.indexOf(id);
+    if (i < 0 || n <= 0) return null;
+    const def = missionDef(id);
+    const before = s.missions.progress[i];
+    s.missions.progress[i] = Math.min(def.target, before + n);
+    markDirty();
+    if (before < def.target && s.missions.progress[i] >= def.target) {
+      track("mission_complete", { id });
+      return id;
+    }
+    return null;
+  }
+  function claimMission(i) {
+    const s = save();
+    const id = s.missions.ids[i];
+    if (!id || s.missions.claimed[i]) return 0;
+    const def = missionDef(id);
+    if (s.missions.progress[i] < def.target) return 0;
+    s.missions.claimed[i] = true;
+    earn(def.coins, "mission");
+    markDirty();
+    return def.coins;
+  }
+  function claimAllMissionsBonus() {
+    const s = save();
+    if (s.missions.allClaimed || !s.missions.claimed.every(Boolean) || !s.missions.claimed.length) return 0;
+    s.missions.allClaimed = true;
+    earn(MISSION_ALL_BONUS, "mission_all");
+    markDirty();
+    return MISSION_ALL_BONUS;
+  }
+  function missionsClaimable() {
+    const s = save();
+    let n = 0;
+    s.missions.ids.forEach((id, i) => {
+      if (!s.missions.claimed[i] && s.missions.progress[i] >= missionDef(id).target) n++;
+    });
+    if (!s.missions.allClaimed && s.missions.claimed.length && s.missions.claimed.every(Boolean)) n++;
+    return n;
+  }
+  function streakReward(day) {
+    if (day <= STREAK_REWARDS.length) return STREAK_REWARDS[day - 1];
+    return { coins: STREAK_AFTER_WEEK };
+  }
+  function claimStreak() {
+    const s = save();
+    if (s.streak.claimedToday || s.streak.day < 1) return null;
+    const r = streakReward(s.streak.day);
+    s.streak.claimedToday = true;
+    if (r.coins) earn(r.coins, "streak");
+    if (r.species) {
+      s.rescued[r.species] = (s.rescued[r.species] || 0) + 1;
+    }
+    markDirty();
+    track("streak_claim", { day: s.streak.day, reward: r.species ?? r.coins });
+    return r;
+  }
+  function giftRate() {
+    const s = save();
+    let rate = 0;
+    for (const sp of SPECIES) {
+      const lv = bondLevel(s.rescued[sp.id] || 0);
+      if (!lv) continue;
+      rate += GIFTS.perSpeciesPerHour * (1 + GIFTS.bondBonus * (lv - 1));
+    }
+    const decorMul = 1 + s.decor.reduce((a, id) => a + (DECOR.find((d) => d.id === id)?.giftBonus ?? 0), 0);
+    let pigBonus = 0;
+    for (const sp of SPECIES) if (sp.bonus === "gifts") pigBonus += sp.per * bondLevel(s.rescued[sp.id] || 0);
+    return rate * decorMul * (1 + pigBonus);
+  }
+  function giftsPending() {
+    const s = save();
+    const hours = Math.min(GIFTS.capHours, Math.max(0, (nowMs() - s.giftsAt) / 36e5));
+    return Math.floor(hours * giftRate());
+  }
+  function collectGifts() {
+    const s = save();
+    const n = giftsPending();
+    if (n < GIFTS.minCollect) return 0;
+    s.giftsAt = nowMs();
+    earn(n, "gift");
+    markDirty();
+    bumpMission("gifts", 1);
+    track("gift_collect", { amount: n });
+    return n;
+  }
+  function buyDecor(id) {
+    const d = DECOR.find((x) => x.id === id);
+    const s = save();
+    if (!d || s.decor.includes(id)) return false;
+    const pending = giftsPending();
+    if (!spend(d.cost, "decor", id)) return false;
+    s.decor.push(id);
+    const rate = giftRate();
+    if (rate > 0) s.giftsAt = nowMs() - pending / rate * 36e5;
+    markDirty();
+    track("decor_buy", { id });
+    return true;
+  }
+  function dailyChallenge(levels) {
+    const d = today();
+    const r = new Rng(hashString("daily:" + d));
+    const keys = Object.keys(MODS);
+    const mod = keys[Math.floor(r.next() * keys.length)];
+    const top = Math.max(DAILY.minStage, highestCleared());
+    const pool = levels.filter((l) => l.stage <= top);
+    const rooms = [];
+    for (let i = 0; i < DAILY.rooms; i++) {
+      const lv = pool[Math.floor(r.next() * pool.length)];
+      const room = lv.rooms[Math.floor(r.next() * lv.rooms.length)];
+      const copy = JSON.parse(JSON.stringify(room));
+      if (mod === "swarm") copy.monsters = copy.monsters.concat(copy.monsters.filter((m) => m.t === "blob" || m.t === "mini").map((m) => ({ ...m, t: "blob", x: Math.min(500, m.x + 40), y: m.y + 30 })));
+      rooms.push(copy);
+    }
+    const region = pool[Math.floor(r.next() * pool.length)].region;
+    const level2 = { id: `daily-${d}`, stage: Math.min(STAGE_COUNT, top), tier: Math.min(STAGE_COUNT, top), region, rooms };
+    return { mod, level: level2, mods: MODS[mod] };
+  }
+  function dailyRemainingMs() {
+    const n = new Date(nowMs());
+    const end = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1).getTime();
+    return end - n.getTime();
+  }
+  var MODS;
+  var init_progress = __esm({
+    "src/meta/progress.ts"() {
+      "use strict";
+      init_balance();
+      init_rng();
+      init_stats();
+      init_analytics();
+      init_save();
+      MODS = {
+        big: { monsterHp: 1, monsterSpeed: 1, monsterDmg: 1, bulletSpeed: 1, playerDps: 1, bigMonsters: true, coinMul: 2 },
+        fast: { monsterHp: 1, monsterSpeed: 1.3, monsterDmg: 1, bulletSpeed: 1.15, playerDps: 1.3, bigMonsters: false, coinMul: 1.3 },
+        swarm: { monsterHp: 0.75, monsterSpeed: 1, monsterDmg: 0.9, bulletSpeed: 1, playerDps: 1, bigMonsters: false, coinMul: 1.5 },
+        rain: { monsterHp: 1, monsterSpeed: 1, monsterDmg: 1, bulletSpeed: 1.35, playerDps: 1, bigMonsters: false, coinMul: 1.5 }
+      };
+    }
+  });
+
+  // src/debug/panel.ts
+  var panel_exports = {};
+  __export(panel_exports, {
+    initDebug: () => initDebug,
+    presetSave: () => presetSave
+  });
+  function presetSave(name) {
+    const s = newSave();
+    const clear = (n) => {
+      for (let i = 1; i <= n; i++) s.cleared[`s${i}`] = { best: 90, clears: 1, stars: 2 };
+    };
+    if (name === "day1") {
+      clear(3);
+      s.coins = 260;
+      s.stats.runs = 5;
+      s.rescued = { puppy: 3, bunny: 2, squirrel: 2 };
+      s.upgrades = { power: 3, range: 1, health: 2, pressure: 0, splash: 0 };
+    }
+    if (name === "mid") {
+      clear(8);
+      s.coins = 1400;
+      s.stats.runs = 16;
+      s.rescued = { puppy: 6, bunny: 4, squirrel: 3, fox: 3, hedgehog: 1, fawn: 1 };
+      s.upgrades = { power: 8, range: 4, health: 6, pressure: 2, splash: 2 };
+      s.decor = ["ball", "cushion"];
+    }
+    if (name === "late") {
+      clear(22);
+      s.coins = 6e3;
+      s.stats.runs = 60;
+      for (const sp of SPECIES) s.rescued[sp.id] = sp.region === "lake" ? 2 : 8;
+      delete s.rescued.frog;
+      s.upgrades = { power: 20, range: 10, health: 15, pressure: 8, splash: 8 };
+      s.decor = ["ball", "cushion", "bowl", "flowers", "pond", "treehouse"];
+    }
+    if (name === "max") {
+      clear(30);
+      s.coins = 99999;
+      s.stats.runs = 120;
+      for (const sp of SPECIES) s.rescued[sp.id] = 15;
+      for (const u of UPGRADES) s.upgrades[u.id] = u.max;
+      s.decor = ["ball", "cushion", "bowl", "flowers", "pond", "treehouse", "slide", "fountain"];
+    }
+    for (const k of ["upgrades", "shelter", "missions", "daily", "decor"]) if (name !== "fresh") s.flags[`unlock_${k}`] = true;
+    s.giftsAt = Date.now() - 3 * 36e5;
+    return s;
+  }
+  function initDebug(app) {
+    const p = new URLSearchParams(location.search);
+    const preset = p.get("preset");
+    if (preset && !sessionStorage.getItem("preset-applied-" + preset)) {
+      sessionStorage.setItem("preset-applied-" + preset, "1");
+      replaceSave(presetSave(preset));
+    }
+    const btn = document.createElement("button");
+    btn.textContent = "DEV";
+    btn.className = "dbg-toggle";
+    const panel = document.createElement("div");
+    panel.className = "dbg-panel";
+    panel.style.display = "none";
+    const fps = document.createElement("div");
+    fps.className = "dbg-fps";
+    document.body.append(btn, panel, fps);
+    btn.onclick = () => {
+      panel.style.display = panel.style.display === "none" ? "block" : "none";
+      render();
+    };
+    let acc = 0, frames2 = 0;
+    app.debug.onFrame = (dt) => {
+      acc += dt;
+      frames2++;
+      if (acc > 0.5) {
+        fps.textContent = `${Math.round(frames2 / acc)} fps \xB7 ${quality().dprCap}x`;
+        acc = 0;
+        frames2 = 0;
+      }
+    };
+    const act = (label, fn) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.onclick = () => {
+        fn();
+        markDirty();
+        flush();
+        render();
+      };
+      return b;
+    };
+    const row = (title, ...items) => {
+      const d = document.createElement("div");
+      d.className = "dbg-row";
+      const h2 = document.createElement("b");
+      h2.textContent = title;
+      d.append(h2, ...items);
+      return d;
+    };
+    const stageInput = document.createElement("input");
+    stageInput.type = "number";
+    stageInput.min = "1";
+    stageInput.max = String(STAGE_COUNT);
+    stageInput.value = String(Math.min(STAGE_COUNT, Object.keys(save().cleared).length + 1));
+    const render = () => {
+      if (panel.style.display === "none") return;
+      const s = save();
+      const log = document.createElement("pre");
+      log.className = "dbg-log";
+      log.textContent = debugBuffer.events.slice(-25).reverse().map((e) => `${new Date(e.t).toLocaleTimeString()} ${e.name} ${JSON.stringify(e.params)}`).join("\n");
+      panel.replaceChildren(
+        row(`Coins ${s.coins}`, act("+100", () => earn(100, "debug")), act("+1k", () => earn(1e3, "debug")), act("+10k", () => earn(1e4, "debug"))),
+        row("Stage", stageInput, act("Play", () => app.playStage(Number(stageInput.value))), act("Clear \u2264N", () => {
+          var _a, _b;
+          for (let i = 1; i <= Number(stageInput.value); i++) (_a = s.cleared)[_b = `s${i}`] || (_a[_b] = { best: 99, clears: 1, stars: 1 });
+          app.goHome("map");
+        }), act("Unclear all", () => {
+          s.cleared = {};
+          app.goHome("map");
+        })),
+        row(`Day +${s.dayOffset} (streak ${s.streak.day})`, act("Next day", () => {
+          s.dayOffset += 1;
+          refreshDay();
+          app.goHome("map");
+        }), act("Gifts full", () => {
+          s.giftsAt = Date.now() + s.dayOffset * 864e5 - 9 * 36e5;
+        })),
+        row("Animals", act("All x1", () => {
+          for (const sp of SPECIES) s.rescued[sp.id] = Math.max(1, s.rescued[sp.id] || 0);
+        }), act("All bond max", () => {
+          for (const sp of SPECIES) s.rescued[sp.id] = 15;
+        }), act("None", () => {
+          s.rescued = {};
+        })),
+        row("Upgrades", act("+5 all", () => {
+          for (const u of UPGRADES) s.upgrades[u.id] = Math.min(u.max, (s.upgrades[u.id] || 0) + 5);
+        }), act("Max", () => {
+          for (const u of UPGRADES) s.upgrades[u.id] = u.max;
+        }), act("Reset", () => {
+          for (const u of UPGRADES) s.upgrades[u.id] = 0;
+        })),
+        row("Preset", ...["fresh", "day1", "mid", "late", "max"].map((n) => act(n, () => {
+          replaceSave(presetSave(n));
+          app.goHome("map");
+        }))),
+        row("Go", act("Title", () => app.showTitle()), act("Map", () => app.goHome("map")), act("Shelter", () => app.goHome("shelter")), act("Upgrades", () => app.goHome("upgrade")), act("Daily", () => app.playDaily())),
+        log
+      );
+    };
+    if (p.get("home")) app.goHome(p.get("home"));
+  }
+  var init_panel = __esm({
+    "src/debug/panel.ts"() {
+      "use strict";
+      init_balance();
+      init_quality();
+      init_progress();
+      init_save();
+      init_analytics();
+    }
+  });
+
   // assets/art/atlas.json
-  var atlas_default = { atlases: { sprites: { pages: ["sprites-0.png", "sprites-1.png", "sprites-2.png"], frames: { m_boss_forest_normal: { page: 0, x: 3, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_forest_hit: { page: 0, x: 366, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_forest_charge: { page: 0, x: 729, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_village_normal: { page: 0, x: 1092, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_village_hit: { page: 0, x: 1455, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_village_charge: { page: 0, x: 3, y: 366, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_lake_normal: { page: 0, x: 366, y: 366, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_lake_hit: { page: 0, x: 729, y: 366, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_lake_charge: { page: 0, x: 1092, y: 366, w: 360, h: 360, ax: 180, ay: 330 }, ob_fencev: { page: 0, x: 1455, y: 366, w: 50, h: 360, ax: 25, ay: 330 }, ob_house: { page: 0, x: 1508, y: 366, w: 360, h: 300, ax: 180, ay: 270 }, ob_house2: { page: 0, x: 3, y: 729, w: 360, h: 300, ax: 180, ay: 270 }, fx_rays: { page: 0, x: 366, y: 729, w: 300, h: 300, ax: 150, ay: 150 }, goostamp_0: { page: 0, x: 669, y: 729, w: 260, h: 260, ax: 130, ay: 130 }, goostamp_1: { page: 0, x: 932, y: 729, w: 260, h: 260, ax: 130, ay: 130 }, goostamp_2: { page: 0, x: 1195, y: 729, w: 260, h: 260, ax: 130, ay: 130 }, goostamp_3: { page: 0, x: 1458, y: 729, w: 260, h: 260, ax: 130, ay: 130 }, m_chunky_normal: { page: 0, x: 1721, y: 729, w: 220, h: 210, ax: 110, ay: 190 }, m_chunky_hit: { page: 0, x: 3, y: 1032, w: 220, h: 210, ax: 110, ay: 190 }, m_chunky_charge: { page: 0, x: 226, y: 1032, w: 220, h: 210, ax: 110, ay: 190 }, dc_treehouse: { page: 0, x: 449, y: 1032, w: 180, h: 210, ax: 90, ay: 196 }, gate_posts: { page: 0, x: 632, y: 1032, w: 280, h: 200, ax: 140, ay: 180 }, ob_tree: { page: 0, x: 915, y: 1032, w: 170, h: 200, ax: 85, ay: 186 }, ob_tree2: { page: 0, x: 1088, y: 1032, w: 170, h: 200, ax: 85, ay: 186 }, border_tree: { page: 0, x: 1261, y: 1032, w: 170, h: 200, ax: 85, ay: 186 }, ob_pine: { page: 0, x: 1434, y: 1032, w: 130, h: 190, ax: 65, ay: 178 }, border_pine: { page: 0, x: 1567, y: 1032, w: 130, h: 190, ax: 65, ay: 178 }, dc_fountain: { page: 0, x: 1700, y: 1032, w: 180, h: 180, ax: 90, ay: 160 }, kid_idle_0: { page: 0, x: 1883, y: 1032, w: 150, h: 180, ax: 72, ay: 168 }, kid_idle_1: { page: 0, x: 3, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_idle_2: { page: 0, x: 156, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_idle_3: { page: 0, x: 309, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_0: { page: 0, x: 462, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_1: { page: 0, x: 615, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_2: { page: 0, x: 768, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_3: { page: 0, x: 921, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_4: { page: 0, x: 1074, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_5: { page: 0, x: 1227, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_shoot_0: { page: 0, x: 1380, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_shoot_1: { page: 0, x: 1533, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_hurt_0: { page: 0, x: 1686, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_win_0: { page: 0, x: 1839, y: 1245, w: 150, h: 180, ax: 72, ay: 168 }, kid_win_1: { page: 0, x: 3, y: 1428, w: 150, h: 180, ax: 72, ay: 168 }, kid_win_2: { page: 0, x: 156, y: 1428, w: 150, h: 180, ax: 72, ay: 168 }, kid_win_3: { page: 0, x: 309, y: 1428, w: 150, h: 180, ax: 72, ay: 168 }, kid_sad_0: { page: 0, x: 462, y: 1428, w: 150, h: 180, ax: 72, ay: 168 }, kid_sad_1: { page: 0, x: 615, y: 1428, w: 150, h: 180, ax: 72, ay: 168 }, m_jumper_normal: { page: 0, x: 768, y: 1428, w: 150, h: 180, ax: 75, ay: 160 }, m_jumper_hit: { page: 0, x: 921, y: 1428, w: 150, h: 180, ax: 75, ay: 160 }, m_jumper_charge: { page: 0, x: 1074, y: 1428, w: 150, h: 180, ax: 75, ay: 160 }, ob_well: { page: 0, x: 1227, y: 1428, w: 150, h: 180, ax: 75, ay: 160 }, m_nest_normal: { page: 0, x: 1380, y: 1428, w: 210, h: 170, ax: 105, ay: 148 }, m_nest_hit: { page: 0, x: 1593, y: 1428, w: 210, h: 170, ax: 105, ay: 148 }, m_nest_charge: { page: 0, x: 1806, y: 1428, w: 210, h: 170, ax: 105, ay: 148 }, ob_boulder: { page: 0, x: 3, y: 1611, w: 190, h: 160, ax: 95, ay: 140 }, dc_slide: { page: 0, x: 196, y: 1611, w: 190, h: 160, ax: 95, ay: 146 }, m_splitter_normal: { page: 0, x: 389, y: 1611, w: 160, h: 160, ax: 80, ay: 140 }, m_splitter_hit: { page: 0, x: 552, y: 1611, w: 160, h: 160, ax: 80, ay: 140 }, m_splitter_charge: { page: 0, x: 715, y: 1611, w: 160, h: 160, ax: 80, ay: 140 }, m_dasher_normal: { page: 0, x: 878, y: 1611, w: 160, h: 160, ax: 80, ay: 140 }, m_dasher_hit: { page: 0, x: 1041, y: 1611, w: 160, h: 160, ax: 80, ay: 140 }, m_dasher_charge: { page: 0, x: 1204, y: 1611, w: 160, h: 160, ax: 80, ay: 140 }, mk_joybase: { page: 0, x: 1367, y: 1611, w: 160, h: 160, ax: 80, ay: 80 }, m_spitter_normal: { page: 0, x: 1530, y: 1611, w: 140, h: 160, ax: 70, ay: 140 }, m_spitter_hit: { page: 0, x: 1673, y: 1611, w: 140, h: 160, ax: 70, ay: 140 }, m_spitter_charge: { page: 0, x: 1816, y: 1611, w: 140, h: 160, ax: 70, ay: 140 }, fx_splash_0: { page: 0, x: 3, y: 1774, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_1: { page: 0, x: 186, y: 1774, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_2: { page: 0, x: 369, y: 1774, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_3: { page: 0, x: 552, y: 1774, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_4: { page: 0, x: 735, y: 1774, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_5: { page: 0, x: 918, y: 1774, w: 180, h: 150, ax: 90, ay: 100 }, cocoon_0: { page: 0, x: 1101, y: 1774, w: 150, h: 150, ax: 75, ay: 130 }, cocoon_1: { page: 0, x: 1254, y: 1774, w: 150, h: 150, ax: 75, ay: 130 }, cocoon_2: { page: 0, x: 1407, y: 1774, w: 150, h: 150, ax: 75, ay: 130 }, m_blob_normal: { page: 0, x: 1560, y: 1774, w: 140, h: 150, ax: 70, ay: 130 }, m_blob_hit: { page: 0, x: 1703, y: 1774, w: 140, h: 150, ax: 70, ay: 130 }, m_blob_charge: { page: 0, x: 1846, y: 1774, w: 140, h: 150, ax: 70, ay: 130 }, ob_cart: { page: 1, x: 3, y: 3, w: 230, h: 140, ax: 115, ay: 120 }, m_flyer_normal_0: { page: 1, x: 236, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_normal_1: { page: 1, x: 419, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_hit_0: { page: 1, x: 602, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_hit_1: { page: 1, x: 785, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_charge_0: { page: 1, x: 968, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_charge_1: { page: 1, x: 1151, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, a_puppy_walk_0: { page: 1, x: 1334, y: 3, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_walk_1: { page: 1, x: 1467, y: 3, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_walk_2: { page: 1, x: 1600, y: 3, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_walk_3: { page: 1, x: 1733, y: 3, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_idle_0: { page: 1, x: 1866, y: 3, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_idle_1: { page: 1, x: 3, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_happy_0: { page: 1, x: 136, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_happy_1: { page: 1, x: 269, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_happy_2: { page: 1, x: 402, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_sleep_0: { page: 1, x: 535, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_sleep_1: { page: 1, x: 668, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_trapped_0: { page: 1, x: 801, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_trapped_1: { page: 1, x: 934, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_walk_0: { page: 1, x: 1067, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_walk_1: { page: 1, x: 1200, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_walk_2: { page: 1, x: 1333, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_walk_3: { page: 1, x: 1466, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_idle_0: { page: 1, x: 1599, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_idle_1: { page: 1, x: 1732, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_happy_0: { page: 1, x: 1865, y: 146, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_happy_1: { page: 1, x: 3, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_happy_2: { page: 1, x: 136, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_sleep_0: { page: 1, x: 269, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_sleep_1: { page: 1, x: 402, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_trapped_0: { page: 1, x: 535, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_trapped_1: { page: 1, x: 668, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_walk_0: { page: 1, x: 801, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_walk_1: { page: 1, x: 934, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_walk_2: { page: 1, x: 1067, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_walk_3: { page: 1, x: 1200, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_idle_0: { page: 1, x: 1333, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_idle_1: { page: 1, x: 1466, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_happy_0: { page: 1, x: 1599, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_happy_1: { page: 1, x: 1732, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_happy_2: { page: 1, x: 1865, y: 279, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_sleep_0: { page: 1, x: 3, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_sleep_1: { page: 1, x: 136, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_trapped_0: { page: 1, x: 269, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_trapped_1: { page: 1, x: 402, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_walk_0: { page: 1, x: 535, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_walk_1: { page: 1, x: 668, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_walk_2: { page: 1, x: 801, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_walk_3: { page: 1, x: 934, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_idle_0: { page: 1, x: 1067, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_idle_1: { page: 1, x: 1200, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_happy_0: { page: 1, x: 1333, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_happy_1: { page: 1, x: 1466, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_happy_2: { page: 1, x: 1599, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_sleep_0: { page: 1, x: 1732, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_sleep_1: { page: 1, x: 1865, y: 412, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_trapped_0: { page: 1, x: 3, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_trapped_1: { page: 1, x: 136, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_walk_0: { page: 1, x: 269, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_walk_1: { page: 1, x: 402, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_walk_2: { page: 1, x: 535, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_walk_3: { page: 1, x: 668, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_idle_0: { page: 1, x: 801, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_idle_1: { page: 1, x: 934, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_happy_0: { page: 1, x: 1067, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_happy_1: { page: 1, x: 1200, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_happy_2: { page: 1, x: 1333, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_sleep_0: { page: 1, x: 1466, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_sleep_1: { page: 1, x: 1599, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_trapped_0: { page: 1, x: 1732, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_trapped_1: { page: 1, x: 1865, y: 545, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_walk_0: { page: 1, x: 3, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_walk_1: { page: 1, x: 136, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_walk_2: { page: 1, x: 269, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_walk_3: { page: 1, x: 402, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_idle_0: { page: 1, x: 535, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_idle_1: { page: 1, x: 668, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_happy_0: { page: 1, x: 801, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_happy_1: { page: 1, x: 934, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_happy_2: { page: 1, x: 1067, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_sleep_0: { page: 1, x: 1200, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_sleep_1: { page: 1, x: 1333, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_trapped_0: { page: 1, x: 1466, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_trapped_1: { page: 1, x: 1599, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_walk_0: { page: 1, x: 1732, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_walk_1: { page: 1, x: 1865, y: 678, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_walk_2: { page: 1, x: 3, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_walk_3: { page: 1, x: 136, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_idle_0: { page: 1, x: 269, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_idle_1: { page: 1, x: 402, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_happy_0: { page: 1, x: 535, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_happy_1: { page: 1, x: 668, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_happy_2: { page: 1, x: 801, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_sleep_0: { page: 1, x: 934, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_sleep_1: { page: 1, x: 1067, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_trapped_0: { page: 1, x: 1200, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_trapped_1: { page: 1, x: 1333, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_walk_0: { page: 1, x: 1466, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_walk_1: { page: 1, x: 1599, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_walk_2: { page: 1, x: 1732, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_walk_3: { page: 1, x: 1865, y: 811, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_idle_0: { page: 1, x: 3, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_idle_1: { page: 1, x: 136, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_happy_0: { page: 1, x: 269, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_happy_1: { page: 1, x: 402, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_happy_2: { page: 1, x: 535, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_sleep_0: { page: 1, x: 668, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_sleep_1: { page: 1, x: 801, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_trapped_0: { page: 1, x: 934, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_trapped_1: { page: 1, x: 1067, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_walk_0: { page: 1, x: 1200, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_walk_1: { page: 1, x: 1333, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_walk_2: { page: 1, x: 1466, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_walk_3: { page: 1, x: 1599, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_idle_0: { page: 1, x: 1732, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_idle_1: { page: 1, x: 1865, y: 944, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_happy_0: { page: 1, x: 3, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_happy_1: { page: 1, x: 136, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_happy_2: { page: 1, x: 269, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_sleep_0: { page: 1, x: 402, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_sleep_1: { page: 1, x: 535, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_trapped_0: { page: 1, x: 668, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_trapped_1: { page: 1, x: 801, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_walk_0: { page: 1, x: 934, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_walk_1: { page: 1, x: 1067, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_walk_2: { page: 1, x: 1200, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_walk_3: { page: 1, x: 1333, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_idle_0: { page: 1, x: 1466, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_idle_1: { page: 1, x: 1599, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_happy_0: { page: 1, x: 1732, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_happy_1: { page: 1, x: 1865, y: 1077, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_happy_2: { page: 1, x: 3, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_sleep_0: { page: 1, x: 136, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_sleep_1: { page: 1, x: 269, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_trapped_0: { page: 1, x: 402, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_trapped_1: { page: 1, x: 535, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_walk_0: { page: 1, x: 668, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_walk_1: { page: 1, x: 801, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_walk_2: { page: 1, x: 934, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_walk_3: { page: 1, x: 1067, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_idle_0: { page: 1, x: 1200, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_idle_1: { page: 1, x: 1333, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_happy_0: { page: 1, x: 1466, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_happy_1: { page: 1, x: 1599, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_happy_2: { page: 1, x: 1732, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_sleep_0: { page: 1, x: 1865, y: 1210, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_sleep_1: { page: 1, x: 3, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_trapped_0: { page: 1, x: 136, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_trapped_1: { page: 1, x: 269, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_walk_0: { page: 1, x: 402, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_walk_1: { page: 1, x: 535, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_walk_2: { page: 1, x: 668, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_walk_3: { page: 1, x: 801, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_idle_0: { page: 1, x: 934, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_idle_1: { page: 1, x: 1067, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_happy_0: { page: 1, x: 1200, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_happy_1: { page: 1, x: 1333, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_happy_2: { page: 1, x: 1466, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_sleep_0: { page: 1, x: 1599, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_sleep_1: { page: 1, x: 1732, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_trapped_0: { page: 1, x: 1865, y: 1343, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_trapped_1: { page: 1, x: 3, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_walk_0: { page: 1, x: 136, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_walk_1: { page: 1, x: 269, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_walk_2: { page: 1, x: 402, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_walk_3: { page: 1, x: 535, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_idle_0: { page: 1, x: 668, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_idle_1: { page: 1, x: 801, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_happy_0: { page: 1, x: 934, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_happy_1: { page: 1, x: 1067, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_happy_2: { page: 1, x: 1200, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_sleep_0: { page: 1, x: 1333, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_sleep_1: { page: 1, x: 1466, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_trapped_0: { page: 1, x: 1599, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_trapped_1: { page: 1, x: 1732, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_walk_0: { page: 1, x: 1865, y: 1476, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_walk_1: { page: 1, x: 3, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_walk_2: { page: 1, x: 136, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_walk_3: { page: 1, x: 269, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_idle_0: { page: 1, x: 402, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_idle_1: { page: 1, x: 535, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_happy_0: { page: 1, x: 668, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_happy_1: { page: 1, x: 801, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_happy_2: { page: 1, x: 934, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_sleep_0: { page: 1, x: 1067, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_sleep_1: { page: 1, x: 1200, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_trapped_0: { page: 1, x: 1333, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_trapped_1: { page: 1, x: 1466, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_walk_0: { page: 1, x: 1599, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_walk_1: { page: 1, x: 1732, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_walk_2: { page: 1, x: 1865, y: 1609, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_walk_3: { page: 1, x: 3, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_idle_0: { page: 1, x: 136, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_idle_1: { page: 1, x: 269, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_happy_0: { page: 1, x: 402, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_happy_1: { page: 1, x: 535, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_happy_2: { page: 1, x: 668, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_sleep_0: { page: 1, x: 801, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_sleep_1: { page: 1, x: 934, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_trapped_0: { page: 1, x: 1067, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_trapped_1: { page: 1, x: 1200, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_walk_0: { page: 1, x: 1333, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_walk_1: { page: 1, x: 1466, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_walk_2: { page: 1, x: 1599, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_walk_3: { page: 1, x: 1732, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_idle_0: { page: 1, x: 1865, y: 1742, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_idle_1: { page: 1, x: 3, y: 1875, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_happy_0: { page: 1, x: 136, y: 1875, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_happy_1: { page: 1, x: 269, y: 1875, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_happy_2: { page: 1, x: 402, y: 1875, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_sleep_0: { page: 1, x: 535, y: 1875, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_sleep_1: { page: 1, x: 668, y: 1875, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_trapped_0: { page: 1, x: 801, y: 1875, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_trapped_1: { page: 1, x: 934, y: 1875, w: 130, h: 130, ax: 62, ay: 118 }, brush: { page: 1, x: 1067, y: 1875, w: 128, h: 128, ax: 64, ay: 64 }, fx_ring: { page: 1, x: 1198, y: 1875, w: 128, h: 128, ax: 64, ay: 64 }, fx_softring: { page: 1, x: 1329, y: 1875, w: 128, h: 128, ax: 64, ay: 64 }, fx_glow: { page: 1, x: 1460, y: 1875, w: 128, h: 128, ax: 64, ay: 64 }, ob_shellrock: { page: 1, x: 1591, y: 1875, w: 140, h: 120, ax: 70, ay: 104 }, sh_sign: { page: 1, x: 1734, y: 1875, w: 140, h: 120, ax: 70, ay: 110 }, kid_portrait: { page: 1, x: 1877, y: 1875, w: 120, h: 120, ax: 60, ay: 112 }, p_puppy: { page: 2, x: 3, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_bunny: { page: 2, x: 126, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_squirrel: { page: 2, x: 249, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_fox: { page: 2, x: 372, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_hedgehog: { page: 2, x: 495, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_fawn: { page: 2, x: 618, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_kitten: { page: 2, x: 741, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_duckling: { page: 2, x: 864, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_piglet: { page: 2, x: 987, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_lamb: { page: 2, x: 1110, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_chick: { page: 2, x: 1233, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_otter: { page: 2, x: 1356, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_turtle: { page: 2, x: 1479, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_frog: { page: 2, x: 1602, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_penguin: { page: 2, x: 1725, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_panda: { page: 2, x: 1848, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, mk_shield: { page: 2, x: 3, y: 126, w: 120, h: 120, ax: 60, ay: 60 }, dc_pond: { page: 2, x: 126, y: 126, w: 200, h: 110, ax: 100, ay: 82 }, ob_rock: { page: 2, x: 329, y: 126, w: 130, h: 110, ax: 65, ay: 96 }, ob_reeds: { page: 2, x: 462, y: 126, w: 90, h: 110, ax: 45, ay: 100 }, mk_hand: { page: 2, x: 555, y: 126, w: 90, h: 110, ax: 30, ay: 12 }, gun_6: { page: 2, x: 648, y: 126, w: 168, h: 104, ax: 46, ay: 54 }, ob_hay: { page: 2, x: 819, y: 126, w: 140, h: 100, ax: 70, ay: 86 }, ob_crate: { page: 2, x: 962, y: 126, w: 120, h: 100, ax: 60, ay: 86 }, m_mini_normal: { page: 2, x: 1085, y: 126, w: 96, h: 96, ax: 48, ay: 84 }, m_mini_hit: { page: 2, x: 1184, y: 126, w: 96, h: 96, ax: 48, ay: 84 }, m_mini_charge: { page: 2, x: 1283, y: 126, w: 96, h: 96, ax: 48, ay: 84 }, ic_pause: { page: 2, x: 1382, y: 126, w: 96, h: 96, ax: 48, ay: 48 }, ic_play: { page: 2, x: 1481, y: 126, w: 96, h: 96, ax: 48, ay: 48 }, ic_close: { page: 2, x: 1580, y: 126, w: 96, h: 96, ax: 48, ay: 48 }, ic_back: { page: 2, x: 1679, y: 126, w: 96, h: 96, ax: 48, ay: 48 }, ic_arrow: { page: 2, x: 1778, y: 126, w: 96, h: 96, ax: 48, ay: 48 }, ic_gear: { page: 2, x: 1877, y: 126, w: 96, h: 96, ax: 48, ay: 48 }, ic_heart: { page: 2, x: 3, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_exit: { page: 2, x: 102, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_home: { page: 2, x: 201, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_map: { page: 2, x: 300, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_shelter: { page: 2, x: 399, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_upgrade: { page: 2, x: 498, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_missions: { page: 2, x: 597, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_daily: { page: 2, x: 696, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_streak: { page: 2, x: 795, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_gift: { page: 2, x: 894, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_music: { page: 2, x: 993, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_sfx: { page: 2, x: 1092, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_vibe: { page: 2, x: 1191, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_lang: { page: 2, x: 1290, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_gfx: { page: 2, x: 1389, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_eye: { page: 2, x: 1488, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_lock: { page: 2, x: 1587, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_check: { page: 2, x: 1686, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_star: { page: 2, x: 1785, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_star_empty: { page: 2, x: 1884, y: 249, w: 96, h: 96, ax: 48, ay: 48 }, ic_info: { page: 2, x: 3, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_reset: { page: 2, x: 102, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_paw: { page: 2, x: 201, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_crown: { page: 2, x: 300, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_goo: { page: 2, x: 399, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_coin: { page: 2, x: 498, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_power: { page: 2, x: 597, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_range: { page: 2, x: 696, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_health: { page: 2, x: 795, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_pressure: { page: 2, x: 894, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_splash: { page: 2, x: 993, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_thick: { page: 2, x: 1092, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_range: { page: 2, x: 1191, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_multi: { page: 2, x: 1290, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_pierce: { page: 2, x: 1389, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_chain: { page: 2, x: 1488, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_splash: { page: 2, x: 1587, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_turbo: { page: 2, x: 1686, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_keep: { page: 2, x: 1785, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_speed: { page: 2, x: 1884, y: 348, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_shield: { page: 2, x: 3, y: 447, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_trail: { page: 2, x: 102, y: 447, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_magnet: { page: 2, x: 201, y: 447, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_vitality: { page: 2, x: 300, y: 447, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_heal: { page: 2, x: 399, y: 447, w: 96, h: 96, ax: 48, ay: 48 }, ob_log: { page: 2, x: 498, y: 447, w: 250, h: 90, ax: 125, ay: 74 }, gate_goo: { page: 2, x: 751, y: 447, w: 160, h: 90, ax: 80, ay: 80 }, dc_flowers: { page: 2, x: 914, y: 447, w: 150, h: 90, ax: 75, ay: 74 }, ob_bush: { page: 2, x: 1067, y: 447, w: 120, h: 90, ax: 60, ay: 78 }, border_bush: { page: 2, x: 1190, y: 447, w: 120, h: 90, ax: 60, ay: 78 }, fx_impact_0: { page: 2, x: 1313, y: 447, w: 90, h: 90, ax: 45, ay: 55 }, fx_impact_1: { page: 2, x: 1406, y: 447, w: 90, h: 90, ax: 45, ay: 55 }, fx_impact_2: { page: 2, x: 1499, y: 447, w: 90, h: 90, ax: 45, ay: 55 }, fx_impact_3: { page: 2, x: 1592, y: 447, w: 90, h: 90, ax: 45, ay: 55 }, ob_barrel: { page: 2, x: 1685, y: 447, w: 76, h: 90, ax: 38, ay: 78 }, gun_5: { page: 2, x: 1764, y: 447, w: 132, h: 84, ax: 36, ay: 44 }, dc_cushion: { page: 2, x: 1899, y: 447, w: 130, h: 80, ax: 65, ay: 66 }, mk_joyknob: { page: 2, x: 3, y: 546, w: 80, h: 80, ax: 40, ay: 40 }, dc_ball: { page: 2, x: 86, y: 546, w: 80, h: 80, ax: 40, ay: 70 }, gun_4: { page: 2, x: 169, y: 546, w: 120, h: 74, ax: 50, ay: 39 }, ob_fence: { page: 2, x: 292, y: 546, w: 320, h: 70, ax: 160, ay: 56 }, ob_driftwood: { page: 2, x: 615, y: 546, w: 240, h: 70, ax: 120, ay: 56 }, gun_3: { page: 2, x: 858, y: 546, w: 112, h: 70, ax: 44, ay: 37 }, gun_2: { page: 2, x: 973, y: 546, w: 96, h: 70, ax: 30, ay: 37 }, ob_stump: { page: 2, x: 1072, y: 546, w: 80, h: 70, ax: 40, ay: 56 }, mk_arrow: { page: 2, x: 1155, y: 546, w: 70, h: 70, ax: 35, ay: 35 }, pack_0: { page: 2, x: 1228, y: 546, w: 60, h: 70, ax: 30, ay: 40 }, pack_1: { page: 2, x: 1291, y: 546, w: 60, h: 70, ax: 30, ay: 40 }, pack_2: { page: 2, x: 1354, y: 546, w: 60, h: 70, ax: 30, ay: 40 }, gun_1: { page: 2, x: 1417, y: 546, w: 90, h: 64, ax: 28, ay: 34 }, dc_bowl: { page: 2, x: 1510, y: 546, w: 90, h: 64, ax: 45, ay: 54 }, p_mist: { page: 2, x: 1603, y: 546, w: 64, h: 64, ax: 32, ay: 32 }, mk_help: { page: 2, x: 1670, y: 546, w: 64, h: 60, ax: 32, ay: 56 }, gun_0: { page: 2, x: 1737, y: 546, w: 70, h: 56, ax: 26, ay: 30 }, mk_excl: { page: 2, x: 1810, y: 546, w: 48, h: 56, ax: 24, ay: 52 }, shadow: { page: 2, x: 1861, y: 546, w: 120, h: 48, ax: 60, ay: 24 }, goo_drop_0: { page: 2, x: 1984, y: 546, w: 48, h: 48, ax: 24, ay: 24 }, goo_drop_1: { page: 2, x: 3, y: 629, w: 48, h: 48, ax: 24, ay: 24 }, mk_zzz: { page: 2, x: 54, y: 629, w: 44, h: 40, ax: 22, ay: 38 }, d_flower_0: { page: 2, x: 101, y: 629, w: 40, h: 40, ax: 20, ay: 34 }, d_flower_1: { page: 2, x: 144, y: 629, w: 40, h: 40, ax: 20, ay: 34 }, d_flower_2: { page: 2, x: 187, y: 629, w: 40, h: 40, ax: 20, ay: 34 }, d_flower_3: { page: 2, x: 230, y: 629, w: 40, h: 40, ax: 20, ay: 34 }, d_flower_4: { page: 2, x: 273, y: 629, w: 40, h: 40, ax: 20, ay: 34 }, d_tuft: { page: 2, x: 316, y: 629, w: 40, h: 40, ax: 20, ay: 34 }, d_mushroom: { page: 2, x: 359, y: 629, w: 40, h: 40, ax: 20, ay: 34 }, p_bubble: { page: 2, x: 402, y: 629, w: 40, h: 40, ax: 20, ay: 20 }, p_star: { page: 2, x: 445, y: 629, w: 40, h: 40, ax: 20, ay: 20 }, p_heal: { page: 2, x: 488, y: 629, w: 36, h: 40, ax: 18, ay: 22 }, p_sparkle_0: { page: 2, x: 527, y: 629, w: 36, h: 36, ax: 18, ay: 18 }, p_sparkle_1: { page: 2, x: 566, y: 629, w: 36, h: 36, ax: 18, ay: 18 }, p_sparkle_2: { page: 2, x: 605, y: 629, w: 36, h: 36, ax: 18, ay: 18 }, p_xp: { page: 2, x: 644, y: 629, w: 30, h: 36, ax: 15, ay: 20 }, p_heart: { page: 2, x: 677, y: 629, w: 36, h: 34, ax: 18, ay: 17 }, p_coin_0: { page: 2, x: 716, y: 629, w: 34, h: 34, ax: 17, ay: 17 }, p_coin_1: { page: 2, x: 753, y: 629, w: 34, h: 34, ax: 17, ay: 17 }, p_coin_2: { page: 2, x: 790, y: 629, w: 34, h: 34, ax: 17, ay: 17 }, p_coin_3: { page: 2, x: 827, y: 629, w: 34, h: 34, ax: 17, ay: 17 }, p_dust: { page: 2, x: 864, y: 629, w: 40, h: 30, ax: 20, ay: 15 }, d_clover: { page: 2, x: 907, y: 629, w: 30, h: 30, ax: 15, ay: 24 }, p_water: { page: 2, x: 940, y: 629, w: 24, h: 28, ax: 12, ay: 16 }, d_pebble_0: { page: 2, x: 967, y: 629, w: 30, h: 26, ax: 15, ay: 20 }, d_pebble_1: { page: 2, x: 1e3, y: 629, w: 30, h: 26, ax: 15, ay: 20 }, d_shell: { page: 2, x: 1033, y: 629, w: 30, h: 26, ax: 15, ay: 22 }, d_leaf: { page: 2, x: 1066, y: 629, w: 30, h: 22, ax: 15, ay: 16 }, p_goo_violet: { page: 2, x: 1099, y: 629, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_pink: { page: 2, x: 1124, y: 629, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_amber: { page: 2, x: 1149, y: 629, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_indigo: { page: 2, x: 1174, y: 629, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_plum: { page: 2, x: 1199, y: 629, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_teal: { page: 2, x: 1224, y: 629, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_berry: { page: 2, x: 1249, y: 629, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_royal: { page: 2, x: 1274, y: 629, w: 22, h: 22, ax: 11, ay: 11 }, p_water_s: { page: 2, x: 1299, y: 629, w: 14, h: 16, ax: 7, ay: 9 }, p_petal: { page: 2, x: 1316, y: 629, w: 18, h: 14, ax: 9, ay: 7 }, p_conf_0: { page: 2, x: 1337, y: 629, w: 16, h: 12, ax: 8, ay: 6 }, p_conf_1: { page: 2, x: 1356, y: 629, w: 16, h: 12, ax: 8, ay: 6 }, p_conf_2: { page: 2, x: 1375, y: 629, w: 16, h: 12, ax: 8, ay: 6 }, p_conf_3: { page: 2, x: 1394, y: 629, w: 16, h: 12, ax: 8, ay: 6 }, p_conf_4: { page: 2, x: 1413, y: 629, w: 16, h: 12, ax: 8, ay: 6 } } }, tiles: { pages: ["tiles-0.png"], frames: { g_0: { page: 0, x: 3, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, g_1: { page: 0, x: 102, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, g_2: { page: 0, x: 201, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, g_3: { page: 0, x: 300, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_1: { page: 0, x: 399, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_2: { page: 0, x: 498, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_3: { page: 0, x: 597, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_4: { page: 0, x: 696, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_5: { page: 0, x: 795, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_6: { page: 0, x: 894, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_7: { page: 0, x: 993, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_8: { page: 0, x: 1092, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_9: { page: 0, x: 1191, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_10: { page: 0, x: 1290, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_11: { page: 0, x: 1389, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_12: { page: 0, x: 1488, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_13: { page: 0, x: 1587, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_14: { page: 0, x: 1686, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_15: { page: 0, x: 1785, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_water_1: { page: 0, x: 1884, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_water_2: { page: 0, x: 3, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_3: { page: 0, x: 102, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_4: { page: 0, x: 201, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_5: { page: 0, x: 300, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_6: { page: 0, x: 399, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_7: { page: 0, x: 498, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_8: { page: 0, x: 597, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_9: { page: 0, x: 696, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_10: { page: 0, x: 795, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_11: { page: 0, x: 894, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_12: { page: 0, x: 993, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_13: { page: 0, x: 1092, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_14: { page: 0, x: 1191, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_15: { page: 0, x: 1290, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_1: { page: 0, x: 1389, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_2: { page: 0, x: 1488, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_3: { page: 0, x: 1587, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_4: { page: 0, x: 1686, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_5: { page: 0, x: 1785, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_6: { page: 0, x: 1884, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_7: { page: 0, x: 3, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_8: { page: 0, x: 102, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_9: { page: 0, x: 201, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_10: { page: 0, x: 300, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_11: { page: 0, x: 399, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_12: { page: 0, x: 498, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_13: { page: 0, x: 597, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_14: { page: 0, x: 696, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_15: { page: 0, x: 795, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_1: { page: 0, x: 894, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_2: { page: 0, x: 993, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_3: { page: 0, x: 1092, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_4: { page: 0, x: 1191, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_5: { page: 0, x: 1290, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_6: { page: 0, x: 1389, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_7: { page: 0, x: 1488, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_8: { page: 0, x: 1587, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_9: { page: 0, x: 1686, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_10: { page: 0, x: 1785, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_11: { page: 0, x: 1884, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_12: { page: 0, x: 3, y: 300, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_13: { page: 0, x: 102, y: 300, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_14: { page: 0, x: 201, y: 300, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_15: { page: 0, x: 300, y: 300, w: 96, h: 96, ax: 0, ay: 0 } } } }, points: { gun_0: { muzzle: [39, -2] }, gun_1: { muzzle: [55, -3] }, gun_2: { muzzle: [57, -6] }, gun_3: { muzzle: [66, -3] }, gun_4: { muzzle: [75, -2] }, gun_5: { muzzle: [80, -4] }, gun_6: { muzzle: [106, -6] } } };
+  var atlas_default = { atlases: { sprites: { pages: ["sprites-0.png", "sprites-1.png", "sprites-2.png"], frames: { m_boss_forest_normal: { page: 0, x: 3, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_forest_hit: { page: 0, x: 366, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_forest_charge: { page: 0, x: 729, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_village_normal: { page: 0, x: 1092, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_village_hit: { page: 0, x: 1455, y: 3, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_village_charge: { page: 0, x: 3, y: 366, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_lake_normal: { page: 0, x: 366, y: 366, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_lake_hit: { page: 0, x: 729, y: 366, w: 360, h: 360, ax: 180, ay: 330 }, m_boss_lake_charge: { page: 0, x: 1092, y: 366, w: 360, h: 360, ax: 180, ay: 330 }, ob_fencev: { page: 0, x: 1455, y: 366, w: 50, h: 360, ax: 25, ay: 330 }, ob_house: { page: 0, x: 1508, y: 366, w: 360, h: 300, ax: 180, ay: 270 }, ob_house2: { page: 0, x: 3, y: 729, w: 360, h: 300, ax: 180, ay: 270 }, fx_rays: { page: 0, x: 366, y: 729, w: 300, h: 300, ax: 150, ay: 150 }, ob_windmill: { page: 0, x: 669, y: 729, w: 210, h: 300, ax: 105, ay: 280 }, sh_house: { page: 0, x: 882, y: 729, w: 380, h: 290, ax: 190, ay: 280 }, goostamp_0: { page: 0, x: 1265, y: 729, w: 260, h: 260, ax: 130, ay: 130 }, goostamp_1: { page: 0, x: 1528, y: 729, w: 260, h: 260, ax: 130, ay: 130 }, goostamp_2: { page: 0, x: 3, y: 1032, w: 260, h: 260, ax: 130, ay: 130 }, goostamp_3: { page: 0, x: 266, y: 1032, w: 260, h: 260, ax: 130, ay: 130 }, m_chunky_normal: { page: 0, x: 529, y: 1032, w: 220, h: 210, ax: 110, ay: 190 }, m_chunky_hit: { page: 0, x: 752, y: 1032, w: 220, h: 210, ax: 110, ay: 190 }, m_chunky_charge: { page: 0, x: 975, y: 1032, w: 220, h: 210, ax: 110, ay: 190 }, dc_treehouse: { page: 0, x: 1198, y: 1032, w: 180, h: 210, ax: 90, ay: 196 }, gate_posts: { page: 0, x: 1381, y: 1032, w: 280, h: 200, ax: 140, ay: 180 }, ob_tree: { page: 0, x: 1664, y: 1032, w: 170, h: 200, ax: 85, ay: 186 }, ob_tree2: { page: 0, x: 1837, y: 1032, w: 170, h: 200, ax: 85, ay: 186 }, border_tree: { page: 0, x: 3, y: 1295, w: 170, h: 200, ax: 85, ay: 186 }, ob_pine: { page: 0, x: 176, y: 1295, w: 130, h: 190, ax: 65, ay: 178 }, border_pine: { page: 0, x: 309, y: 1295, w: 130, h: 190, ax: 65, ay: 178 }, dc_fountain: { page: 0, x: 442, y: 1295, w: 180, h: 180, ax: 90, ay: 160 }, kid_idle_0: { page: 0, x: 625, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_idle_1: { page: 0, x: 778, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_idle_2: { page: 0, x: 931, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_idle_3: { page: 0, x: 1084, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_0: { page: 0, x: 1237, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_1: { page: 0, x: 1390, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_2: { page: 0, x: 1543, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_3: { page: 0, x: 1696, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_4: { page: 0, x: 1849, y: 1295, w: 150, h: 180, ax: 72, ay: 168 }, kid_run_5: { page: 0, x: 3, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_shoot_0: { page: 0, x: 156, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_shoot_1: { page: 0, x: 309, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_hurt_0: { page: 0, x: 462, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_win_0: { page: 0, x: 615, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_win_1: { page: 0, x: 768, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_win_2: { page: 0, x: 921, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_win_3: { page: 0, x: 1074, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_sad_0: { page: 0, x: 1227, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, kid_sad_1: { page: 0, x: 1380, y: 1498, w: 150, h: 180, ax: 72, ay: 168 }, m_jumper_normal: { page: 0, x: 1533, y: 1498, w: 150, h: 180, ax: 75, ay: 160 }, m_jumper_hit: { page: 0, x: 1686, y: 1498, w: 150, h: 180, ax: 75, ay: 160 }, m_jumper_charge: { page: 0, x: 1839, y: 1498, w: 150, h: 180, ax: 75, ay: 160 }, ob_well: { page: 0, x: 3, y: 1681, w: 150, h: 180, ax: 75, ay: 160 }, m_nest_normal: { page: 0, x: 156, y: 1681, w: 210, h: 170, ax: 105, ay: 148 }, m_nest_hit: { page: 0, x: 369, y: 1681, w: 210, h: 170, ax: 105, ay: 148 }, m_nest_charge: { page: 0, x: 582, y: 1681, w: 210, h: 170, ax: 105, ay: 148 }, ob_boulder: { page: 0, x: 795, y: 1681, w: 190, h: 160, ax: 95, ay: 140 }, dc_slide: { page: 0, x: 988, y: 1681, w: 190, h: 160, ax: 95, ay: 146 }, m_splitter_normal: { page: 0, x: 1181, y: 1681, w: 160, h: 160, ax: 80, ay: 140 }, m_splitter_hit: { page: 0, x: 1344, y: 1681, w: 160, h: 160, ax: 80, ay: 140 }, m_splitter_charge: { page: 0, x: 1507, y: 1681, w: 160, h: 160, ax: 80, ay: 140 }, m_dasher_normal: { page: 0, x: 1670, y: 1681, w: 160, h: 160, ax: 80, ay: 140 }, m_dasher_hit: { page: 0, x: 1833, y: 1681, w: 160, h: 160, ax: 80, ay: 140 }, m_dasher_charge: { page: 0, x: 3, y: 1864, w: 160, h: 160, ax: 80, ay: 140 }, mk_joybase: { page: 0, x: 166, y: 1864, w: 160, h: 160, ax: 80, ay: 80 }, m_spitter_normal: { page: 0, x: 329, y: 1864, w: 140, h: 160, ax: 70, ay: 140 }, m_spitter_hit: { page: 0, x: 472, y: 1864, w: 140, h: 160, ax: 70, ay: 140 }, m_spitter_charge: { page: 0, x: 615, y: 1864, w: 140, h: 160, ax: 70, ay: 140 }, fx_splash_0: { page: 0, x: 758, y: 1864, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_1: { page: 0, x: 941, y: 1864, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_2: { page: 0, x: 1124, y: 1864, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_3: { page: 0, x: 1307, y: 1864, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_4: { page: 0, x: 1490, y: 1864, w: 180, h: 150, ax: 90, ay: 100 }, fx_splash_5: { page: 0, x: 1673, y: 1864, w: 180, h: 150, ax: 90, ay: 100 }, cocoon_0: { page: 0, x: 1856, y: 1864, w: 150, h: 150, ax: 75, ay: 130 }, cocoon_1: { page: 1, x: 3, y: 3, w: 150, h: 150, ax: 75, ay: 130 }, cocoon_2: { page: 1, x: 156, y: 3, w: 150, h: 150, ax: 75, ay: 130 }, m_blob_normal: { page: 1, x: 309, y: 3, w: 140, h: 150, ax: 70, ay: 130 }, m_blob_hit: { page: 1, x: 452, y: 3, w: 140, h: 150, ax: 70, ay: 130 }, m_blob_charge: { page: 1, x: 595, y: 3, w: 140, h: 150, ax: 70, ay: 130 }, mp_sign: { page: 1, x: 738, y: 3, w: 250, h: 140, ax: 125, ay: 130 }, ob_cart: { page: 1, x: 991, y: 3, w: 230, h: 140, ax: 115, ay: 120 }, m_flyer_normal_0: { page: 1, x: 1224, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_normal_1: { page: 1, x: 1407, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_hit_0: { page: 1, x: 1590, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_hit_1: { page: 1, x: 1773, y: 3, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_charge_0: { page: 1, x: 3, y: 156, w: 180, h: 140, ax: 90, ay: 120 }, m_flyer_charge_1: { page: 1, x: 186, y: 156, w: 180, h: 140, ax: 90, ay: 120 }, a_puppy_walk_0: { page: 1, x: 369, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_walk_1: { page: 1, x: 502, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_walk_2: { page: 1, x: 635, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_walk_3: { page: 1, x: 768, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_idle_0: { page: 1, x: 901, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_idle_1: { page: 1, x: 1034, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_happy_0: { page: 1, x: 1167, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_happy_1: { page: 1, x: 1300, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_happy_2: { page: 1, x: 1433, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_sleep_0: { page: 1, x: 1566, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_sleep_1: { page: 1, x: 1699, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_trapped_0: { page: 1, x: 1832, y: 156, w: 130, h: 130, ax: 62, ay: 118 }, a_puppy_trapped_1: { page: 1, x: 3, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_walk_0: { page: 1, x: 136, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_walk_1: { page: 1, x: 269, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_walk_2: { page: 1, x: 402, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_walk_3: { page: 1, x: 535, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_idle_0: { page: 1, x: 668, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_idle_1: { page: 1, x: 801, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_happy_0: { page: 1, x: 934, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_happy_1: { page: 1, x: 1067, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_happy_2: { page: 1, x: 1200, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_sleep_0: { page: 1, x: 1333, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_sleep_1: { page: 1, x: 1466, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_trapped_0: { page: 1, x: 1599, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_bunny_trapped_1: { page: 1, x: 1732, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_walk_0: { page: 1, x: 1865, y: 299, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_walk_1: { page: 1, x: 3, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_walk_2: { page: 1, x: 136, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_walk_3: { page: 1, x: 269, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_idle_0: { page: 1, x: 402, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_idle_1: { page: 1, x: 535, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_happy_0: { page: 1, x: 668, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_happy_1: { page: 1, x: 801, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_happy_2: { page: 1, x: 934, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_sleep_0: { page: 1, x: 1067, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_sleep_1: { page: 1, x: 1200, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_trapped_0: { page: 1, x: 1333, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_squirrel_trapped_1: { page: 1, x: 1466, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_walk_0: { page: 1, x: 1599, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_walk_1: { page: 1, x: 1732, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_walk_2: { page: 1, x: 1865, y: 432, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_walk_3: { page: 1, x: 3, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_idle_0: { page: 1, x: 136, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_idle_1: { page: 1, x: 269, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_happy_0: { page: 1, x: 402, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_happy_1: { page: 1, x: 535, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_happy_2: { page: 1, x: 668, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_sleep_0: { page: 1, x: 801, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_sleep_1: { page: 1, x: 934, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_trapped_0: { page: 1, x: 1067, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_fox_trapped_1: { page: 1, x: 1200, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_walk_0: { page: 1, x: 1333, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_walk_1: { page: 1, x: 1466, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_walk_2: { page: 1, x: 1599, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_walk_3: { page: 1, x: 1732, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_idle_0: { page: 1, x: 1865, y: 565, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_idle_1: { page: 1, x: 3, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_happy_0: { page: 1, x: 136, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_happy_1: { page: 1, x: 269, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_happy_2: { page: 1, x: 402, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_sleep_0: { page: 1, x: 535, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_sleep_1: { page: 1, x: 668, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_trapped_0: { page: 1, x: 801, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_hedgehog_trapped_1: { page: 1, x: 934, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_walk_0: { page: 1, x: 1067, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_walk_1: { page: 1, x: 1200, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_walk_2: { page: 1, x: 1333, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_walk_3: { page: 1, x: 1466, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_idle_0: { page: 1, x: 1599, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_idle_1: { page: 1, x: 1732, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_happy_0: { page: 1, x: 1865, y: 698, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_happy_1: { page: 1, x: 3, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_happy_2: { page: 1, x: 136, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_sleep_0: { page: 1, x: 269, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_sleep_1: { page: 1, x: 402, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_trapped_0: { page: 1, x: 535, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_fawn_trapped_1: { page: 1, x: 668, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_walk_0: { page: 1, x: 801, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_walk_1: { page: 1, x: 934, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_walk_2: { page: 1, x: 1067, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_walk_3: { page: 1, x: 1200, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_idle_0: { page: 1, x: 1333, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_idle_1: { page: 1, x: 1466, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_happy_0: { page: 1, x: 1599, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_happy_1: { page: 1, x: 1732, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_happy_2: { page: 1, x: 1865, y: 831, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_sleep_0: { page: 1, x: 3, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_sleep_1: { page: 1, x: 136, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_trapped_0: { page: 1, x: 269, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_kitten_trapped_1: { page: 1, x: 402, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_walk_0: { page: 1, x: 535, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_walk_1: { page: 1, x: 668, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_walk_2: { page: 1, x: 801, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_walk_3: { page: 1, x: 934, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_idle_0: { page: 1, x: 1067, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_idle_1: { page: 1, x: 1200, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_happy_0: { page: 1, x: 1333, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_happy_1: { page: 1, x: 1466, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_happy_2: { page: 1, x: 1599, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_sleep_0: { page: 1, x: 1732, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_sleep_1: { page: 1, x: 1865, y: 964, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_trapped_0: { page: 1, x: 3, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_duckling_trapped_1: { page: 1, x: 136, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_walk_0: { page: 1, x: 269, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_walk_1: { page: 1, x: 402, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_walk_2: { page: 1, x: 535, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_walk_3: { page: 1, x: 668, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_idle_0: { page: 1, x: 801, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_idle_1: { page: 1, x: 934, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_happy_0: { page: 1, x: 1067, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_happy_1: { page: 1, x: 1200, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_happy_2: { page: 1, x: 1333, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_sleep_0: { page: 1, x: 1466, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_sleep_1: { page: 1, x: 1599, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_trapped_0: { page: 1, x: 1732, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_piglet_trapped_1: { page: 1, x: 1865, y: 1097, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_walk_0: { page: 1, x: 3, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_walk_1: { page: 1, x: 136, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_walk_2: { page: 1, x: 269, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_walk_3: { page: 1, x: 402, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_idle_0: { page: 1, x: 535, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_idle_1: { page: 1, x: 668, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_happy_0: { page: 1, x: 801, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_happy_1: { page: 1, x: 934, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_happy_2: { page: 1, x: 1067, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_sleep_0: { page: 1, x: 1200, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_sleep_1: { page: 1, x: 1333, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_trapped_0: { page: 1, x: 1466, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_lamb_trapped_1: { page: 1, x: 1599, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_walk_0: { page: 1, x: 1732, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_walk_1: { page: 1, x: 1865, y: 1230, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_walk_2: { page: 1, x: 3, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_walk_3: { page: 1, x: 136, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_idle_0: { page: 1, x: 269, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_idle_1: { page: 1, x: 402, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_happy_0: { page: 1, x: 535, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_happy_1: { page: 1, x: 668, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_happy_2: { page: 1, x: 801, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_sleep_0: { page: 1, x: 934, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_sleep_1: { page: 1, x: 1067, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_trapped_0: { page: 1, x: 1200, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_chick_trapped_1: { page: 1, x: 1333, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_walk_0: { page: 1, x: 1466, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_walk_1: { page: 1, x: 1599, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_walk_2: { page: 1, x: 1732, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_walk_3: { page: 1, x: 1865, y: 1363, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_idle_0: { page: 1, x: 3, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_idle_1: { page: 1, x: 136, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_happy_0: { page: 1, x: 269, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_happy_1: { page: 1, x: 402, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_happy_2: { page: 1, x: 535, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_sleep_0: { page: 1, x: 668, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_sleep_1: { page: 1, x: 801, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_trapped_0: { page: 1, x: 934, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_otter_trapped_1: { page: 1, x: 1067, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_walk_0: { page: 1, x: 1200, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_walk_1: { page: 1, x: 1333, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_walk_2: { page: 1, x: 1466, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_walk_3: { page: 1, x: 1599, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_idle_0: { page: 1, x: 1732, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_idle_1: { page: 1, x: 1865, y: 1496, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_happy_0: { page: 1, x: 3, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_happy_1: { page: 1, x: 136, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_happy_2: { page: 1, x: 269, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_sleep_0: { page: 1, x: 402, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_sleep_1: { page: 1, x: 535, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_trapped_0: { page: 1, x: 668, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_turtle_trapped_1: { page: 1, x: 801, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_walk_0: { page: 1, x: 934, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_walk_1: { page: 1, x: 1067, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_walk_2: { page: 1, x: 1200, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_walk_3: { page: 1, x: 1333, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_idle_0: { page: 1, x: 1466, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_idle_1: { page: 1, x: 1599, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_happy_0: { page: 1, x: 1732, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_happy_1: { page: 1, x: 1865, y: 1629, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_happy_2: { page: 1, x: 3, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_sleep_0: { page: 1, x: 136, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_sleep_1: { page: 1, x: 269, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_trapped_0: { page: 1, x: 402, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_frog_trapped_1: { page: 1, x: 535, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_walk_0: { page: 1, x: 668, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_walk_1: { page: 1, x: 801, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_walk_2: { page: 1, x: 934, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_walk_3: { page: 1, x: 1067, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_idle_0: { page: 1, x: 1200, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_idle_1: { page: 1, x: 1333, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_happy_0: { page: 1, x: 1466, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_happy_1: { page: 1, x: 1599, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_happy_2: { page: 1, x: 1732, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_sleep_0: { page: 1, x: 1865, y: 1762, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_sleep_1: { page: 1, x: 3, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_trapped_0: { page: 1, x: 136, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_penguin_trapped_1: { page: 1, x: 269, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_walk_0: { page: 1, x: 402, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_walk_1: { page: 1, x: 535, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_walk_2: { page: 1, x: 668, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_walk_3: { page: 1, x: 801, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_idle_0: { page: 1, x: 934, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_idle_1: { page: 1, x: 1067, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_happy_0: { page: 1, x: 1200, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_happy_1: { page: 1, x: 1333, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_happy_2: { page: 1, x: 1466, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_sleep_0: { page: 1, x: 1599, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_sleep_1: { page: 1, x: 1732, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_trapped_0: { page: 1, x: 1865, y: 1895, w: 130, h: 130, ax: 62, ay: 118 }, a_panda_trapped_1: { page: 2, x: 3, y: 3, w: 130, h: 130, ax: 62, ay: 118 }, brush: { page: 2, x: 136, y: 3, w: 128, h: 128, ax: 64, ay: 64 }, fx_ring: { page: 2, x: 267, y: 3, w: 128, h: 128, ax: 64, ay: 64 }, fx_softring: { page: 2, x: 398, y: 3, w: 128, h: 128, ax: 64, ay: 64 }, fx_glow: { page: 2, x: 529, y: 3, w: 128, h: 128, ax: 64, ay: 64 }, ob_shellrock: { page: 2, x: 660, y: 3, w: 140, h: 120, ax: 70, ay: 104 }, sh_sign: { page: 2, x: 803, y: 3, w: 140, h: 120, ax: 70, ay: 110 }, kid_portrait: { page: 2, x: 946, y: 3, w: 120, h: 120, ax: 60, ay: 112 }, p_puppy: { page: 2, x: 1069, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_bunny: { page: 2, x: 1192, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_squirrel: { page: 2, x: 1315, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_fox: { page: 2, x: 1438, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_hedgehog: { page: 2, x: 1561, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_fawn: { page: 2, x: 1684, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_kitten: { page: 2, x: 1807, y: 3, w: 120, h: 120, ax: 60, ay: 60 }, p_duckling: { page: 2, x: 3, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, p_piglet: { page: 2, x: 126, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, p_lamb: { page: 2, x: 249, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, p_chick: { page: 2, x: 372, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, p_otter: { page: 2, x: 495, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, p_turtle: { page: 2, x: 618, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, p_frog: { page: 2, x: 741, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, p_penguin: { page: 2, x: 864, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, p_panda: { page: 2, x: 987, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, sil_puppy: { page: 2, x: 1110, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, sil_bunny: { page: 2, x: 1233, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, sil_squirrel: { page: 2, x: 1356, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, sil_fox: { page: 2, x: 1479, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, sil_hedgehog: { page: 2, x: 1602, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, sil_fawn: { page: 2, x: 1725, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, sil_kitten: { page: 2, x: 1848, y: 136, w: 120, h: 120, ax: 60, ay: 60 }, sil_duckling: { page: 2, x: 3, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, sil_piglet: { page: 2, x: 126, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, sil_lamb: { page: 2, x: 249, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, sil_chick: { page: 2, x: 372, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, sil_otter: { page: 2, x: 495, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, sil_turtle: { page: 2, x: 618, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, sil_frog: { page: 2, x: 741, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, sil_penguin: { page: 2, x: 864, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, sil_panda: { page: 2, x: 987, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, mk_shield: { page: 2, x: 1110, y: 259, w: 120, h: 120, ax: 60, ay: 60 }, dc_pond: { page: 2, x: 1233, y: 259, w: 200, h: 110, ax: 100, ay: 82 }, ob_rock: { page: 2, x: 1436, y: 259, w: 130, h: 110, ax: 65, ay: 96 }, ob_reeds: { page: 2, x: 1569, y: 259, w: 90, h: 110, ax: 45, ay: 100 }, mk_hand: { page: 2, x: 1662, y: 259, w: 90, h: 110, ax: 30, ay: 12 }, gun_6: { page: 2, x: 1755, y: 259, w: 168, h: 104, ax: 46, ay: 54 }, ob_hay: { page: 2, x: 3, y: 382, w: 140, h: 100, ax: 70, ay: 86 }, ob_crate: { page: 2, x: 146, y: 382, w: 120, h: 100, ax: 60, ay: 86 }, m_mini_normal: { page: 2, x: 269, y: 382, w: 96, h: 96, ax: 48, ay: 84 }, m_mini_hit: { page: 2, x: 368, y: 382, w: 96, h: 96, ax: 48, ay: 84 }, m_mini_charge: { page: 2, x: 467, y: 382, w: 96, h: 96, ax: 48, ay: 84 }, ic_pause: { page: 2, x: 566, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_play: { page: 2, x: 665, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_close: { page: 2, x: 764, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_back: { page: 2, x: 863, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_arrow: { page: 2, x: 962, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_gear: { page: 2, x: 1061, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_heart: { page: 2, x: 1160, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_exit: { page: 2, x: 1259, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_home: { page: 2, x: 1358, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_map: { page: 2, x: 1457, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_shelter: { page: 2, x: 1556, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_upgrade: { page: 2, x: 1655, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_missions: { page: 2, x: 1754, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_daily: { page: 2, x: 1853, y: 382, w: 96, h: 96, ax: 48, ay: 48 }, ic_streak: { page: 2, x: 3, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_gift: { page: 2, x: 102, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_music: { page: 2, x: 201, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_sfx: { page: 2, x: 300, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_vibe: { page: 2, x: 399, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_lang: { page: 2, x: 498, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_gfx: { page: 2, x: 597, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_eye: { page: 2, x: 696, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_lock: { page: 2, x: 795, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_check: { page: 2, x: 894, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_star: { page: 2, x: 993, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_star_empty: { page: 2, x: 1092, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_info: { page: 2, x: 1191, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_reset: { page: 2, x: 1290, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_paw: { page: 2, x: 1389, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_crown: { page: 2, x: 1488, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_goo: { page: 2, x: 1587, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_coin: { page: 2, x: 1686, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_power: { page: 2, x: 1785, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_range: { page: 2, x: 1884, y: 485, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_health: { page: 2, x: 3, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_pressure: { page: 2, x: 102, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_up_splash: { page: 2, x: 201, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_thick: { page: 2, x: 300, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_range: { page: 2, x: 399, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_multi: { page: 2, x: 498, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_pierce: { page: 2, x: 597, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_chain: { page: 2, x: 696, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_splash: { page: 2, x: 795, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_turbo: { page: 2, x: 894, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_keep: { page: 2, x: 993, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_speed: { page: 2, x: 1092, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_shield: { page: 2, x: 1191, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_trail: { page: 2, x: 1290, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_magnet: { page: 2, x: 1389, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_vitality: { page: 2, x: 1488, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ic_skill_heal: { page: 2, x: 1587, y: 584, w: 96, h: 96, ax: 48, ay: 48 }, ob_log: { page: 2, x: 1686, y: 584, w: 250, h: 90, ax: 125, ay: 74 }, gate_goo: { page: 2, x: 3, y: 683, w: 160, h: 90, ax: 80, ay: 80 }, dc_flowers: { page: 2, x: 166, y: 683, w: 150, h: 90, ax: 75, ay: 74 }, ob_bush: { page: 2, x: 319, y: 683, w: 120, h: 90, ax: 60, ay: 78 }, border_bush: { page: 2, x: 442, y: 683, w: 120, h: 90, ax: 60, ay: 78 }, fx_impact_0: { page: 2, x: 565, y: 683, w: 90, h: 90, ax: 45, ay: 55 }, fx_impact_1: { page: 2, x: 658, y: 683, w: 90, h: 90, ax: 45, ay: 55 }, fx_impact_2: { page: 2, x: 751, y: 683, w: 90, h: 90, ax: 45, ay: 55 }, fx_impact_3: { page: 2, x: 844, y: 683, w: 90, h: 90, ax: 45, ay: 55 }, ob_barrel: { page: 2, x: 937, y: 683, w: 76, h: 90, ax: 38, ay: 78 }, gun_5: { page: 2, x: 1016, y: 683, w: 132, h: 84, ax: 36, ay: 44 }, mp_node_boss: { page: 2, x: 1151, y: 683, w: 110, h: 84, ax: 55, ay: 48 }, dc_cushion: { page: 2, x: 1264, y: 683, w: 130, h: 80, ax: 65, ay: 66 }, mk_joyknob: { page: 2, x: 1397, y: 683, w: 80, h: 80, ax: 40, ay: 40 }, dc_ball: { page: 2, x: 1480, y: 683, w: 80, h: 80, ax: 40, ay: 70 }, mp_flag: { page: 2, x: 1563, y: 683, w: 60, h: 80, ax: 30, ay: 74 }, gun_4: { page: 2, x: 1626, y: 683, w: 120, h: 74, ax: 50, ay: 39 }, ob_fence: { page: 2, x: 3, y: 776, w: 320, h: 70, ax: 160, ay: 56 }, ob_driftwood: { page: 2, x: 326, y: 776, w: 240, h: 70, ax: 120, ay: 56 }, gun_3: { page: 2, x: 569, y: 776, w: 112, h: 70, ax: 44, ay: 37 }, gun_2: { page: 2, x: 684, y: 776, w: 96, h: 70, ax: 30, ay: 37 }, mp_node: { page: 2, x: 783, y: 776, w: 96, h: 70, ax: 48, ay: 40 }, ob_stump: { page: 2, x: 882, y: 776, w: 80, h: 70, ax: 40, ay: 56 }, mk_arrow: { page: 2, x: 965, y: 776, w: 70, h: 70, ax: 35, ay: 35 }, pack_0: { page: 2, x: 1038, y: 776, w: 60, h: 70, ax: 30, ay: 40 }, pack_1: { page: 2, x: 1101, y: 776, w: 60, h: 70, ax: 30, ay: 40 }, pack_2: { page: 2, x: 1164, y: 776, w: 60, h: 70, ax: 30, ay: 40 }, gun_1: { page: 2, x: 1227, y: 776, w: 90, h: 64, ax: 28, ay: 34 }, dc_bowl: { page: 2, x: 1320, y: 776, w: 90, h: 64, ax: 45, ay: 54 }, p_mist: { page: 2, x: 1413, y: 776, w: 64, h: 64, ax: 32, ay: 32 }, mk_help: { page: 2, x: 1480, y: 776, w: 64, h: 60, ax: 32, ay: 56 }, gun_0: { page: 2, x: 1547, y: 776, w: 70, h: 56, ax: 26, ay: 30 }, mk_excl: { page: 2, x: 1620, y: 776, w: 48, h: 56, ax: 24, ay: 52 }, sh_basket: { page: 2, x: 1671, y: 776, w: 90, h: 50, ax: 45, ay: 40 }, shadow: { page: 2, x: 1764, y: 776, w: 120, h: 48, ax: 60, ay: 24 }, goo_drop_0: { page: 2, x: 1887, y: 776, w: 48, h: 48, ax: 24, ay: 24 }, goo_drop_1: { page: 2, x: 1938, y: 776, w: 48, h: 48, ax: 24, ay: 24 }, mk_zzz: { page: 2, x: 1989, y: 776, w: 44, h: 40, ax: 22, ay: 38 }, d_flower_0: { page: 2, x: 3, y: 849, w: 40, h: 40, ax: 20, ay: 34 }, d_flower_1: { page: 2, x: 46, y: 849, w: 40, h: 40, ax: 20, ay: 34 }, d_flower_2: { page: 2, x: 89, y: 849, w: 40, h: 40, ax: 20, ay: 34 }, d_flower_3: { page: 2, x: 132, y: 849, w: 40, h: 40, ax: 20, ay: 34 }, d_flower_4: { page: 2, x: 175, y: 849, w: 40, h: 40, ax: 20, ay: 34 }, d_tuft: { page: 2, x: 218, y: 849, w: 40, h: 40, ax: 20, ay: 34 }, d_mushroom: { page: 2, x: 261, y: 849, w: 40, h: 40, ax: 20, ay: 34 }, p_bubble: { page: 2, x: 304, y: 849, w: 40, h: 40, ax: 20, ay: 20 }, p_star: { page: 2, x: 347, y: 849, w: 40, h: 40, ax: 20, ay: 20 }, p_heal: { page: 2, x: 390, y: 849, w: 36, h: 40, ax: 18, ay: 22 }, p_sparkle_0: { page: 2, x: 429, y: 849, w: 36, h: 36, ax: 18, ay: 18 }, p_sparkle_1: { page: 2, x: 468, y: 849, w: 36, h: 36, ax: 18, ay: 18 }, p_sparkle_2: { page: 2, x: 507, y: 849, w: 36, h: 36, ax: 18, ay: 18 }, p_xp: { page: 2, x: 546, y: 849, w: 30, h: 36, ax: 15, ay: 20 }, p_heart: { page: 2, x: 579, y: 849, w: 36, h: 34, ax: 18, ay: 17 }, p_coin_0: { page: 2, x: 618, y: 849, w: 34, h: 34, ax: 17, ay: 17 }, p_coin_1: { page: 2, x: 655, y: 849, w: 34, h: 34, ax: 17, ay: 17 }, p_coin_2: { page: 2, x: 692, y: 849, w: 34, h: 34, ax: 17, ay: 17 }, p_coin_3: { page: 2, x: 729, y: 849, w: 34, h: 34, ax: 17, ay: 17 }, p_dust: { page: 2, x: 766, y: 849, w: 40, h: 30, ax: 20, ay: 15 }, d_clover: { page: 2, x: 809, y: 849, w: 30, h: 30, ax: 15, ay: 24 }, p_water: { page: 2, x: 842, y: 849, w: 24, h: 28, ax: 12, ay: 16 }, d_pebble_0: { page: 2, x: 869, y: 849, w: 30, h: 26, ax: 15, ay: 20 }, d_pebble_1: { page: 2, x: 902, y: 849, w: 30, h: 26, ax: 15, ay: 20 }, d_shell: { page: 2, x: 935, y: 849, w: 30, h: 26, ax: 15, ay: 22 }, d_leaf: { page: 2, x: 968, y: 849, w: 30, h: 22, ax: 15, ay: 16 }, p_goo_violet: { page: 2, x: 1001, y: 849, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_pink: { page: 2, x: 1026, y: 849, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_amber: { page: 2, x: 1051, y: 849, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_indigo: { page: 2, x: 1076, y: 849, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_plum: { page: 2, x: 1101, y: 849, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_teal: { page: 2, x: 1126, y: 849, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_berry: { page: 2, x: 1151, y: 849, w: 22, h: 22, ax: 11, ay: 11 }, p_goo_royal: { page: 2, x: 1176, y: 849, w: 22, h: 22, ax: 11, ay: 11 }, p_water_s: { page: 2, x: 1201, y: 849, w: 14, h: 16, ax: 7, ay: 9 }, p_petal: { page: 2, x: 1218, y: 849, w: 18, h: 14, ax: 9, ay: 7 }, p_conf_0: { page: 2, x: 1239, y: 849, w: 16, h: 12, ax: 8, ay: 6 }, p_conf_1: { page: 2, x: 1258, y: 849, w: 16, h: 12, ax: 8, ay: 6 }, p_conf_2: { page: 2, x: 1277, y: 849, w: 16, h: 12, ax: 8, ay: 6 }, p_conf_3: { page: 2, x: 1296, y: 849, w: 16, h: 12, ax: 8, ay: 6 }, p_conf_4: { page: 2, x: 1315, y: 849, w: 16, h: 12, ax: 8, ay: 6 } } }, tiles: { pages: ["tiles-0.png"], frames: { g_0: { page: 0, x: 3, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, g_1: { page: 0, x: 102, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, g_2: { page: 0, x: 201, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, g_3: { page: 0, x: 300, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_1: { page: 0, x: 399, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_2: { page: 0, x: 498, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_3: { page: 0, x: 597, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_4: { page: 0, x: 696, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_5: { page: 0, x: 795, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_6: { page: 0, x: 894, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_7: { page: 0, x: 993, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_8: { page: 0, x: 1092, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_9: { page: 0, x: 1191, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_10: { page: 0, x: 1290, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_11: { page: 0, x: 1389, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_12: { page: 0, x: 1488, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_13: { page: 0, x: 1587, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_14: { page: 0, x: 1686, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_path_15: { page: 0, x: 1785, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_water_1: { page: 0, x: 1884, y: 3, w: 96, h: 96, ax: 0, ay: 0 }, t_water_2: { page: 0, x: 3, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_3: { page: 0, x: 102, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_4: { page: 0, x: 201, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_5: { page: 0, x: 300, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_6: { page: 0, x: 399, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_7: { page: 0, x: 498, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_8: { page: 0, x: 597, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_9: { page: 0, x: 696, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_10: { page: 0, x: 795, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_11: { page: 0, x: 894, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_12: { page: 0, x: 993, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_13: { page: 0, x: 1092, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_14: { page: 0, x: 1191, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_water_15: { page: 0, x: 1290, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_1: { page: 0, x: 1389, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_2: { page: 0, x: 1488, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_3: { page: 0, x: 1587, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_4: { page: 0, x: 1686, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_5: { page: 0, x: 1785, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_6: { page: 0, x: 1884, y: 102, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_7: { page: 0, x: 3, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_8: { page: 0, x: 102, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_9: { page: 0, x: 201, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_10: { page: 0, x: 300, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_11: { page: 0, x: 399, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_12: { page: 0, x: 498, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_13: { page: 0, x: 597, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_14: { page: 0, x: 696, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_sand_15: { page: 0, x: 795, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_1: { page: 0, x: 894, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_2: { page: 0, x: 993, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_3: { page: 0, x: 1092, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_4: { page: 0, x: 1191, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_5: { page: 0, x: 1290, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_6: { page: 0, x: 1389, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_7: { page: 0, x: 1488, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_8: { page: 0, x: 1587, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_9: { page: 0, x: 1686, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_10: { page: 0, x: 1785, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_11: { page: 0, x: 1884, y: 201, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_12: { page: 0, x: 3, y: 300, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_13: { page: 0, x: 102, y: 300, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_14: { page: 0, x: 201, y: 300, w: 96, h: 96, ax: 0, ay: 0 }, t_cobble_15: { page: 0, x: 300, y: 300, w: 96, h: 96, ax: 0, ay: 0 } } } }, points: { gun_0: { muzzle: [39, -2] }, gun_1: { muzzle: [55, -3] }, gun_2: { muzzle: [57, -6] }, gun_3: { muzzle: [66, -3] }, gun_4: { muzzle: [75, -2] }, gun_5: { muzzle: [80, -4] }, gun_6: { muzzle: [106, -6] } } };
 
   // src/engine/atlas.ts
   var ART_SCALE = 2;
@@ -420,34 +1556,11 @@
     return shared;
   }
 
-  // src/engine/quality.ts
-  var PRESETS = {
-    low: { dprCap: 1, particles: 140, streamFx: false, bgScale: 1, fpsCap: 30, shake: true, glow: false },
-    medium: { dprCap: 1.75, particles: 320, streamFx: true, bgScale: 1.5, fpsCap: 60, shake: true, glow: true },
-    high: { dprCap: 2.5, particles: 600, streamFx: true, bgScale: 2, fpsCap: 60, shake: true, glow: true }
-  };
-  var level = "medium";
-  var listeners = [];
-  function quality() {
-    return PRESETS[level];
-  }
-  function setQuality(l) {
-    if (l === level) return;
-    level = l;
-    for (const f of listeners) f();
-  }
-  function onQualityChange(f) {
-    listeners.push(f);
-  }
-  function defaultQuality() {
-    const mem = navigator.deviceMemory ?? 4;
-    const cores = navigator.hardwareConcurrency ?? 4;
-    if (mem <= 2 || cores <= 2) return "low";
-    if (mem >= 6 && cores >= 6 && !/Android|iPhone|iPad/i.test(navigator.userAgent)) return "high";
-    return "medium";
-  }
+  // src/main.ts
+  init_quality();
 
   // src/engine/screen.ts
+  init_quality();
   var screen = {
     canvas: null,
     ctx: null,
@@ -678,8 +1791,8 @@
     "shelter.whereStreak": "\uCD9C\uC11D {n}\uC77C\uC9F8\uC5D0 \uB180\uB7EC \uC640\uC694",
     "shelter.gifts": "\uC120\uBB3C",
     "shelter.collect": "\uC120\uBB3C \uBC1B\uAE30",
-    "shelter.giftReady": "\uC120\uBB3C {n}\uCF54\uC778\uC774 \uC313\uC600\uC5B4\uC694",
-    "shelter.giftNone": "\uB3D9\uBB3C\uB4E4\uC774 \uC120\uBB3C\uC744 \uBAA8\uC73C\uB294 \uC911\uC774\uC5D0\uC694",
+    "shelter.giftReady": "\uC120\uBB3C {n}\uCF54\uC778",
+    "shelter.giftNone": "\uC120\uBB3C\uC744 \uBAA8\uC73C\uB294 \uC911",
     "shelter.giftRate": "\uC2DC\uAC04\uB2F9 {n}\uCF54\uC778 \xB7 \uCD5C\uB300 {h}\uC2DC\uAC04",
     "shelter.bond": "\uCE5C\uBC00\uB3C4 {n}",
     "shelter.bondNext": "{n}\uBC88 \uB354 \uAD6C\uD558\uBA74 \uCE5C\uBC00\uB3C4 \uC5C5",
@@ -804,7 +1917,7 @@
     "settings.contrastNote": "\uC801\uC758 \uBB3C\uBC29\uC6B8\uC744 \uB178\uB780 \uD14C\uB450\uB9AC\uB85C \uD45C\uC2DC\uD574\uC694",
     "settings.on": "\uCF2C",
     "settings.off": "\uB054",
-    "settings.reset": "\uCC98\uC74C\uBD80\uD130 \uB2E4\uC2DC \uD558\uAE30",
+    "settings.reset": "\uC9C4\uD589 \uCD08\uAE30\uD654",
     "settings.resetConfirm": "\uBAA8\uB4E0 \uC9C4\uD589 \uC0C1\uD669\uC774 \uC9C0\uC6CC\uC838\uC694. \uC815\uB9D0 \uCC98\uC74C\uBD80\uD130 \uD560\uAE4C\uC694?",
     "settings.resetYes": "\uCC98\uC74C\uBD80\uD130",
     "settings.credits": "\uB9CC\uB4E0 \uC774",
@@ -973,8 +2086,8 @@
     "shelter.whereStreak": "Visits on login day {n}",
     "shelter.gifts": "Gifts",
     "shelter.collect": "Collect gifts",
-    "shelter.giftReady": "{n} coins of gifts waiting",
-    "shelter.giftNone": "Your friends are gathering gifts",
+    "shelter.giftReady": "Gifts: {n} coins",
+    "shelter.giftNone": "Gathering gifts",
     "shelter.giftRate": "{n} coins/hour \xB7 up to {h}h",
     "shelter.bond": "Bond {n}",
     "shelter.bondNext": "Rescue {n} more to raise bond",
@@ -1128,6 +2241,9 @@
     document.documentElement.lang = l;
     for (const f of listeners3) f();
   }
+  function onLangChange(f) {
+    listeners3.push(f);
+  }
   function t(key, params) {
     let s = TABLES[lang][key] ?? TABLES.en[key];
     if (s === void 0) {
@@ -1145,122 +2261,9 @@
     return `${Number.isInteger(v) ? v.toFixed(0) : v.toFixed(1)}%`;
   }
 
-  // src/meta/save.ts
-  var KEY = "splash-rescue-save";
-  var SAVE_VERSION = 1;
-  function newSave() {
-    return {
-      v: SAVE_VERSION,
-      installId: Math.random().toString(36).slice(2) + Date.now().toString(36),
-      createdAt: Date.now(),
-      coins: 0,
-      coinsEarned: 0,
-      upgrades: { power: 0, range: 0, health: 0, pressure: 0, splash: 0 },
-      rescued: {},
-      seen: [],
-      cleared: {},
-      attempts: {},
-      decor: [],
-      giftsAt: Date.now(),
-      streak: { day: 0, lastDate: "", claimedToday: false, consecutive: 0 },
-      missions: { date: "", ids: [], progress: [], claimed: [], allClaimed: false },
-      daily: { date: "", cleared: false, streak: 0, lastClearDate: "" },
-      stats: { runs: 0, wins: 0, washed: 0, rooms: 0, playSeconds: 0, sessions: 0, lastSession: 0 },
-      flags: {},
-      settings: { music: 0.7, sfx: 0.9, vibration: true, lang: "auto", quality: "auto", contrast: false },
-      dayOffset: 0,
-      lastStage: 1
-    };
-  }
-  var data = newSave();
-  var dirty = false;
-  var timer = 0;
-  var listeners4 = [];
-  function save() {
-    return data;
-  }
-  function loadSave() {
-    let fresh = true;
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        data = migrate(parsed);
-        fresh = false;
-      }
-    } catch {
-      data = newSave();
-    }
-    return { data, fresh };
-  }
-  function migrate(p) {
-    const base = newSave();
-    const out = { ...base, ...p };
-    out.upgrades = { ...base.upgrades, ...p.upgrades || {} };
-    out.settings = { ...base.settings, ...p.settings || {} };
-    out.stats = { ...base.stats, ...p.stats || {} };
-    out.streak = { ...base.streak, ...p.streak || {} };
-    out.daily = { ...base.daily, ...p.daily || {} };
-    out.missions = { ...base.missions, ...p.missions || {} };
-    out.flags = { ...p.flags || {} };
-    out.v = SAVE_VERSION;
-    return out;
-  }
-  function markDirty() {
-    dirty = true;
-    if (!timer) timer = window.setTimeout(flush, 400);
-  }
-  function flush() {
-    timer = 0;
-    if (!dirty) return;
-    dirty = false;
-    try {
-      localStorage.setItem(KEY, JSON.stringify(data));
-    } catch {
-    }
-    for (const f of listeners4) f(data);
-  }
-
-  // src/services/analytics.ts
-  var DebugBuffer = class {
-    constructor() {
-      this.name = "debug";
-      this.events = [];
-    }
-    track(name, params, ctx2) {
-      this.events.push({ name, params, t: ctx2.t });
-      if (this.events.length > 300) this.events.shift();
-      if (true) console.debug("[analytics]", name, params);
-    }
-  };
-  var RemotePlaceholder = class {
-    constructor() {
-      this.name = "remote";
-      this.queue = [];
-    }
-    track(name, params, ctx2) {
-      this.queue.push({ name, params, ctx: ctx2 });
-      if (this.queue.length > 500) this.queue.shift();
-    }
-  };
-  var debugBuffer = new DebugBuffer();
-  var remote = new RemotePlaceholder();
-  var providers = [debugBuffer, remote];
-  var ctx = { installId: "", session: 0, t: 0, build: "1.0.0" };
-  function initAnalytics(installId, session, build) {
-    ctx.installId = installId;
-    ctx.session = session;
-    ctx.build = build;
-  }
-  function track(name, params = {}) {
-    ctx.t = Date.now();
-    for (const p of providers) {
-      try {
-        p.track(name, params, ctx);
-      } catch {
-      }
-    }
-  }
+  // src/main.ts
+  init_save();
+  init_analytics();
 
   // src/services/platform.ts
   var GuestAuth = class {
@@ -1350,6 +2353,9 @@
   function initModals(root) {
     layer = root;
   }
+  function isOpen(id) {
+    return id ? stack.some((m) => m.id === id) : stack.length > 0;
+  }
   function openModal(body, o) {
     const existing = stack.find((m) => m.id === o.id);
     if (existing) return existing.el;
@@ -1380,243 +2386,43 @@
     if (!silent) audio.play("ui_close", { vol: 0.5 });
     m.opts.onClose?.();
   }
+  function closeAll() {
+    for (const m of [...stack]) {
+      m.openedAt = 0;
+      closeModal(m.id, true);
+    }
+  }
+  var toastEl = null;
+  function toast(text, iconName, ms = 1800) {
+    if (!toastEl) {
+      toastEl = h("div", { class: "toast" });
+      document.getElementById("ui").appendChild(toastEl);
+    }
+    toastEl.replaceChildren(...iconName ? [icon(iconName, 28)] : [], h("span", {}, text));
+    toastEl.classList.remove("show");
+    void toastEl.offsetWidth;
+    toastEl.classList.add("show");
+    const el = toastEl;
+    clearTimeout(el._t);
+    el._t = window.setTimeout(() => el.classList.remove("show"), ms);
+  }
 
   // virtual:levels
   var levels_default = [{ id: "forest-01", stage: 1, region: "forest", intro: "blob", rooms: [{ terrain: [".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##.....", "....##......", "....##......", "....##......", ".....##.....", ".....##.....", ".....##.....", "......##....", "......##....", "......##....", ".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##....."], obstacles: [{ t: "tree", x: 100, y: 210 }, { t: "tree", x: 482, y: 380 }, { t: "pine", x: 86, y: 610 }, { t: "bush", x: 478, y: 690 }, { t: "rock", x: 168, y: 430 }, { t: "stump", x: 440, y: 170 }], goo: [{ x: 190, y: 560, r: 80 }, { x: 390, y: 520, r: 72 }, { x: 288, y: 330, r: 84 }, { x: 140, y: 300, r: 56 }, { x: 430, y: 740, r: 52 }, { x: 290, y: 640, r: 50 }], monsters: [{ t: "blob", x: 205, y: 545 }, { t: "blob", x: 375, y: 560 }, { t: "spitter", x: 288, y: 300 }], animals: [{ s: "puppy", x: 288, y: 445 }], start: { x: 288, y: 850 } }, { terrain: [".....##.....", ".....##.....", "......##....", "......##....", "......##....", ".......##...", ".......##...", "......##....", "......##....", ".....##.....", ".....##.....", "....##......", "....##......", "....##......", ".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##....."], obstacles: [{ t: "tree", x: 110, y: 360 }, { t: "tree", x: 470, y: 230 }, { t: "log", x: 380, y: 520 }, { t: "bush", x: 130, y: 660 }, { t: "rock", x: 450, y: 720 }, { t: "pine", x: 90, y: 160 }], goo: [{ x: 180, y: 250, r: 90 }, { x: 400, y: 350, r: 82 }, { x: 250, y: 520, r: 76 }, { x: 450, y: 620, r: 56 }, { x: 300, y: 190, r: 64 }, { x: 180, y: 760, r: 48 }], monsters: [{ t: "blob", x: 210, y: 430 }, { t: "blob", x: 340, y: 400 }, { t: "blob", x: 420, y: 300 }, { t: "spitter", x: 190, y: 240 }, { t: "blob", x: 290, y: 280, w: 1 }, { t: "blob", x: 170, y: 500, w: 1 }], animals: [{ s: "bunny", x: 150, y: 175 }], start: { x: 288, y: 860 } }, { terrain: [".....##.....", ".....##.....", ".....##.....", ".....##.....", "....##......", "....##......", "....##......", ".....##.....", ".....##.....", "......##....", "......##....", "......##....", ".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##.....", ".....##....."], obstacles: [{ t: "tree", x: 96, y: 470 }, { t: "tree", x: 480, y: 470 }, { t: "rock", x: 200, y: 280 }, { t: "rock", x: 376, y: 280 }, { t: "bush", x: 288, y: 670 }, { t: "pine", x: 480, y: 150 }, { t: "pine", x: 92, y: 160 }], goo: [{ x: 288, y: 340, r: 110 }, { x: 130, y: 620, r: 72 }, { x: 450, y: 630, r: 72 }, { x: 288, y: 170, r: 72 }], monsters: [{ t: "blob", x: 240, y: 390 }, { t: "blob", x: 336, y: 390 }, { t: "spitter", x: 288, y: 210 }, { t: "blob", x: 140, y: 580, w: 1 }, { t: "blob", x: 440, y: 580, w: 1 }, { t: "spitter", x: 288, y: 380, w: 1 }], animals: [{ s: "squirrel", x: 288, y: 290 }], start: { x: 288, y: 860 } }] }];
 
-  // src/config/balance.ts
-  var ROOM = {
-    width: 576,
-    height: 960,
-    tile: 48,
-    wall: 48,
-    // border thickness that frames the play area
-    gateWidth: 110
-  };
-  var PLAYER = {
-    maxHp: 100,
-    radius: 20,
-    moveSpeed: 255,
-    accel: 2600,
-    gooSlow: 0.62,
-    // speed multiplier while standing on goo
-    invuln: 0.9,
-    dps: 34,
-    range: 250,
-    streamWidth: 12,
-    streamSpeed: 2600,
-    // how fast a fresh stream reaches its target
-    fireDelay: 0.05,
-    // seconds after stopping before water comes out
-    aimTurnRate: 16,
-    pressureCharge: 1.1,
-    // seconds standing still to reach full pressure
-    pressureMax: 1.8,
-    // damage multiplier at full pressure
-    pressureWidth: 0.6,
-    // extra width fraction at full pressure
-    pressureDrainMove: 5,
-    // per second while moving
-    pressureKeepOnHit: 0.25,
-    pickupRadius: 64,
-    streamClean: 0.75,
-    // goo cleaned along the stream = width * this
-    impactClean: 24,
-    burstClean: 66,
-    burstDamage: 0.25,
-    // fraction of dps dealt instantly around a washed monster
-    burstRadius: 70,
-    reviveHp: 0.6,
-    revivesPerRun: 1
-  };
-  var RESCUE = {
-    cheerDamagePerAnimal: 0.06,
-    cheerMaxAnimals: 6,
-    healOnRescue: 0.1,
-    // of max hp
-    braveRescueCoins: 8,
-    // rescued while monsters are still around
-    rescueCoins: 10,
-    rescueXp: 3,
-    cocoonHp: 55,
-    cocoonRadius: 30
-  };
-  function xpToNext(level2) {
-    const n = level2 - 1;
-    return Math.round(6 + 6 * n + 1.4 * n * n);
-  }
-  var MONSTERS = {
-    blob: { r: 26, hp: 40, speed: 74, contact: 12, xp: 2, coins: 2 },
-    spitter: { r: 26, hp: 52, speed: 34, contact: 10, xp: 3, coins: 3, cooldown: 2.6, telegraph: 0.65, bulletSpeed: 200, bulletDmg: 13, bulletR: 13 },
-    splitter: { r: 31, hp: 58, speed: 60, contact: 12, xp: 3, coins: 3 },
-    mini: { r: 17, hp: 18, speed: 108, contact: 8, xp: 1, coins: 1 },
-    dasher: { r: 26, hp: 55, speed: 60, contact: 16, xp: 3, coins: 3, cooldown: 1.5, telegraph: 0.8 },
-    chunky: { r: 44, hp: 210, speed: 42, contact: 18, xp: 8, coins: 8, cooldown: 3.6, telegraph: 0.85, bulletSpeed: 190, bulletDmg: 14, bulletR: 14 },
-    nest: { r: 40, hp: 240, speed: 0, contact: 10, xp: 8, coins: 8, cooldown: 4.2, telegraph: 0.7 },
-    jumper: { r: 28, hp: 70, speed: 50, contact: 14, xp: 4, coins: 4, cooldown: 2.9, telegraph: 0.75, bulletDmg: 18 },
-    flyer: { r: 22, hp: 44, speed: 95, contact: 11, xp: 3, coins: 3, cooldown: 3.2, telegraph: 0.5, bulletSpeed: 170, bulletDmg: 11, bulletR: 12 },
-    boss: { r: 78, hp: 1700, speed: 55, contact: 22, xp: 30, coins: 60, cooldown: 2.2, telegraph: 0.9, bulletSpeed: 200, bulletDmg: 15, bulletR: 15 }
-  };
-  var MONSTER_RULES = {
-    spawnRise: 0.6,
-    // seconds rising from the ground, harmless
-    roomStartDelay: 0.9,
-    // grace time when entering a room
-    waveDelay: 1.1,
-    dashSpeed: 560,
-    dashTime: 0.5,
-    jumpTime: 0.7,
-    jumpShock: 64,
-    nestMaxChildren: 3,
-    chunkyRing: 8,
-    hopMove: 0.46,
-    hopRest: 0.32,
-    minScale: 0.55
-    // monsters shrink to this as they get washed
-  };
-  function stageScale(stage) {
-    const s = Math.max(1, stage) - 1;
-    const hp = 0.62 * Math.pow(1.092, s) * (1 + 0.015 * s);
-    const dmg = 0.5 + 0.06 * s + 12e-4 * s * s;
-    const coin = 1 + 0.12 * s;
-    return { hp, dmg, coin };
-  }
-  var REWARDS = {
-    roomClearCoins: 6,
-    // times coin scale
-    stageFirstClear: (stage) => 60 + 25 * stage,
-    stageReplayClear: (stage) => 20 + 6 * stage,
-    starCoins: 30,
-    coinDropSpread: 0.25,
-    healDropChance: 0.06,
-    // chance a washed monster drops a heart-shaped water drop
-    healDropAmount: 0.12
-  };
-  var UPGRADES = [
-    { id: "power", max: 40, base: 40, growth: 1.2, per: 0.12 },
-    { id: "range", max: 20, base: 50, growth: 1.24, per: 0.05 },
-    { id: "health", max: 30, base: 40, growth: 1.2, per: 0.1 },
-    { id: "pressure", max: 15, base: 70, growth: 1.3, per: 0.05 },
-    { id: "splash", max: 20, base: 60, growth: 1.27, per: 0.1 }
-  ];
-  var GUN_TIERS = [
-    { at: 0, dmg: 1, width: 1, splash: 1, range: 0 },
-    { at: 3, dmg: 1.12, width: 1.32, splash: 1.15, range: 10 },
-    { at: 8, dmg: 1.25, width: 1.62, splash: 1.3, range: 20 },
-    { at: 15, dmg: 1.42, width: 1.95, splash: 1.5, range: 35 },
-    { at: 25, dmg: 1.62, width: 2.35, splash: 1.72, range: 50 },
-    { at: 38, dmg: 1.85, width: 2.8, splash: 1.95, range: 70 },
-    { at: 55, dmg: 2.15, width: 3.5, splash: 2.3, range: 100 }
-  ];
-  function gunTierFor(totalLevels) {
-    let t2 = 0;
-    for (let i = 0; i < GUN_TIERS.length; i++) if (totalLevels >= GUN_TIERS[i].at) t2 = i;
-    return t2;
-  }
-  var SKILLS = [
-    { id: "thick", max: 5, weight: 10 },
-    { id: "range", max: 3, weight: 7 },
-    { id: "multi", max: 2, weight: 7 },
-    { id: "pierce", max: 2, weight: 6 },
-    { id: "chain", max: 2, weight: 6 },
-    { id: "splash", max: 3, weight: 7 },
-    { id: "turbo", max: 3, weight: 7 },
-    { id: "keep", max: 2, weight: 5 },
-    { id: "speed", max: 3, weight: 6 },
-    { id: "shield", max: 3, weight: 6 },
-    { id: "trail", max: 3, weight: 5 },
-    { id: "magnet", max: 2, weight: 4 },
-    { id: "vitality", max: 4, weight: 6 },
-    { id: "heal", max: 99, weight: 0 }
-    // offered when hurt, see skillWeight
-  ];
-  var SKILL_VALUES = {
-    thickDmg: 0.22,
-    thickWidth: 0.15,
-    rangeAdd: 0.18,
-    multiDmg: 0.55,
-    pierceDmg: 0.7,
-    chainDmg: 0.5,
-    chainRange: 150,
-    splashDmg: 0.6,
-    splashRadius: 0.25,
-    turboCharge: 0.45,
-    turboMax: 0.2,
-    keepDrain: 0.55,
-    speedAdd: 0.12,
-    speedGoo: 0.12,
-    shieldRegen: [9, 7, 5.5],
-    trailEvery: 0.28,
-    trailDmg: 0.35,
-    trailRadius: 34,
-    magnetRadius: 0.8,
-    magnetXp: 0.15,
-    vitalityHp: 0.2,
-    vitalityHeal: 0.2,
-    heal: 0.4
-  };
-  function skillWeight(def, stacks, hpRatio) {
-    if (def.id === "heal") return hpRatio < 0.8 ? 9 + (1 - hpRatio) * 12 : 0;
-    if (stacks >= def.max) return 0;
-    return def.weight;
-  }
-  var SPECIES = [
-    { id: "puppy", bonus: "maxHp", per: 0.05, region: "forest" },
-    { id: "bunny", bonus: "move", per: 0.03, region: "forest" },
-    { id: "squirrel", bonus: "coins", per: 0.06, region: "forest" },
-    { id: "fox", bonus: "damage", per: 0.04, region: "forest" },
-    { id: "hedgehog", bonus: "armor", per: 0.03, region: "forest" },
-    { id: "fawn", bonus: "range", per: 0.03, region: "forest" },
-    { id: "kitten", bonus: "charge", per: 0.05, region: "village" },
-    { id: "duckling", bonus: "xp", per: 0.06, region: "village" },
-    { id: "piglet", bonus: "gifts", per: 0.1, region: "village" },
-    { id: "lamb", bonus: "rescueHeal", per: 0.15, region: "village" },
-    { id: "chick", bonus: "splash", per: 0.05, region: "village" },
-    { id: "otter", bonus: "pickup", per: 0.08, region: "lake" },
-    { id: "turtle", bonus: "revive", per: 0.08, region: "lake" },
-    { id: "frog", bonus: "gooWalk", per: 0.05, region: "lake" },
-    { id: "penguin", bonus: "pressureMax", per: 0.03, region: "special" },
-    { id: "panda", bonus: "all", per: 0.02, region: "special" }
-  ];
-  var ASSIST = {
-    // after this many failed attempts in a row on a stage, offer a helper boost
-    failsBeforeHelp: 2,
-    helpHp: 0.3,
-    helpDamage: 0.2
-  };
+  // src/app.ts
+  init_quality();
 
-  // src/sim/rng.ts
-  var Rng = class {
-    constructor(seed) {
-      this.s = seed >>> 0 || 1;
-    }
-    next() {
-      let t2 = this.s += 1831565813;
-      t2 = Math.imul(t2 ^ t2 >>> 15, t2 | 1);
-      t2 ^= t2 + Math.imul(t2 ^ t2 >>> 7, t2 | 61);
-      return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
-    }
-    range(a, b) {
-      return a + (b - a) * this.next();
-    }
-    int(a, b) {
-      return Math.floor(this.range(a, b + 1));
-    }
-    pick(arr) {
-      return arr[Math.floor(this.next() * arr.length)];
-    }
-    chance(p) {
-      return this.next() < p;
-    }
-  };
-  function hashString(s) {
-    let h2 = 2166136261;
-    for (let i = 0; i < s.length; i++) {
-      h2 ^= s.charCodeAt(i);
-      h2 = Math.imul(h2, 16777619);
-    }
-    return h2 >>> 0;
-  }
+  // src/game/play.ts
+  init_balance();
+
+  // src/render/roomView.ts
+  init_balance();
+  init_quality();
+  init_rng();
+
+  // src/render/background.ts
+  init_balance();
 
   // src/data/obstacles.ts
   var OBSTACLES = {
@@ -1641,6 +2447,7 @@
   };
 
   // src/render/background.ts
+  init_rng();
   var COLS = ROOM.width / ROOM.tile;
   var ROWS = ROOM.height / ROOM.tile;
   var T = ROOM.tile;
@@ -1750,6 +2557,7 @@
   }
 
   // src/render/particles.ts
+  init_quality();
   var Particles = class {
     constructor() {
       this.list = [];
@@ -1933,6 +2741,7 @@
       this.slowmo = 0;
       this.muzzleX = 0;
       this.muzzleY = 0;
+      this.lift = /* @__PURE__ */ new Map();
       this.sim = sim;
       this.region = region;
       this.bgScale = quality().bgScale;
@@ -1963,7 +2772,7 @@
       m.scale(s, s);
       m.fillStyle = "#fff";
       const blob = (x, y, rad) => {
-        const n = 18;
+        const n = 40;
         const ph = r.range(0, 6.28), ph2 = r.range(0, 6.28);
         m.beginPath();
         for (let i = 0; i <= n; i++) {
@@ -2487,6 +3296,7 @@
         sy *= 0.86;
       }
       const flip = this.sim.player.x < m.x;
+      this.lift.set(m.id, lift + m.r * 0.15 * sc);
       const by = m.y + m.r * 0.6 - lift;
       const s2 = sc * (0.3 + 0.7 * rise);
       draw(ctx2, name, m.x, by + (1 - rise) * 10, s2, flip, 0, rise < 1 ? 0.5 + rise * 0.5 : 1, sx, sy * (0.4 + 0.6 * rise));
@@ -2590,7 +3400,11 @@
       const pr = sim.player.pressure;
       for (const s of sim.segs) {
         const x0 = s.kind === 2 ? s.x0 : this.muzzleX, y0 = s.kind === 2 ? s.y0 : this.muzzleY;
-        const x1 = s.x1, y1 = s.y1;
+        let x1 = s.x1, y1 = s.y1;
+        if (s.hitId >= 0) {
+          const l = this.lift.get(s.hitId);
+          if (l) y1 -= l * 0.8;
+        }
         const len = Math.hypot(x1 - x0, y1 - y0);
         if (len < 2) continue;
         const nx = -(y1 - y0) / len, ny = (x1 - x0) / len;
@@ -2669,7 +3483,11 @@
     ctx2.closePath();
   }
 
+  // src/sim/bot.ts
+  init_balance();
+
   // src/sim/nav.ts
+  init_balance();
   var NAV_CELL = 24;
   var NAV_COLS = ROOM.width / NAV_CELL;
   var NAV_ROWS = ROOM.height / NAV_CELL;
@@ -2744,6 +3562,7 @@
   }
 
   // src/sim/bot.ts
+  init_rng();
   var BOT_EXPERT = { name: "expert", reaction: 0.06, margin: 16, horizon: 0.7, greed: 0, mistakes: 0, rescue: true };
   var BOT_PLAYER = { name: "player", reaction: 0.16, margin: 8, horizon: 0.5, greed: 0.25, mistakes: 0.06, rescue: true };
   var BOT_NOVICE = { name: "novice", reaction: 0.26, margin: 2, horizon: 0.38, greed: 0.45, mistakes: 0.14, rescue: false };
@@ -2932,7 +3751,12 @@
     return Math.hypot(px - (x0 + dx * t2), py - (y0 + dy * t2));
   }
 
+  // src/sim/room.ts
+  init_balance();
+  init_rng();
+
   // src/sim/goo.ts
+  init_balance();
   var GOO_CELL = 16;
   var GOO_COLS = ROOM.width / GOO_CELL;
   var GOO_ROWS = ROOM.height / GOO_CELL;
@@ -2994,6 +3818,7 @@
   };
 
   // src/sim/world.ts
+  init_balance();
   var COLS2 = ROOM.width / ROOM.tile;
   var ROWS2 = ROOM.height / ROOM.tile;
   var StaticWorld = class {
@@ -3178,67 +4003,10 @@
     return tmin < 0 ? 0 : tmin;
   }
 
-  // src/sim/stats.ts
-  function upgradeTotal(up) {
-    let t2 = 0;
-    for (const d of UPGRADES) t2 += up[d.id] || 0;
-    return t2;
-  }
-  function bondBonus(meta, kind) {
-    let v = 0;
-    for (const s of SPECIES) {
-      const lv = meta.bonds[s.id] || 0;
-      if (!lv) continue;
-      if (s.bonus === kind) v += s.per * lv;
-      if (s.bonus === "all" && (kind === "damage" || kind === "maxHp" || kind === "coins")) v += s.per * lv;
-    }
-    return v;
-  }
-  function per(id) {
-    return UPGRADES.find((u) => u.id === id).per;
-  }
-  function computeStats(meta, skills, cheer) {
-    const up = meta.upgrades;
-    const tier = gunTierFor(upgradeTotal(up));
-    const T2 = GUN_TIERS[tier];
-    const sk = (id) => skills[id] || 0;
-    const dmgMul = (1 + per("power") * (up.power || 0)) * T2.dmg * (1 + bondBonus(meta, "damage")) * (1 + SKILL_VALUES.thickDmg * sk("thick")) * (meta.assist ? 1 + ASSIST.helpDamage : 1);
-    const cheerMul = 1 + RESCUE.cheerDamagePerAnimal * Math.min(cheer, RESCUE.cheerMaxAnimals);
-    const hpMul = (1 + per("health") * (up.health || 0)) * (1 + bondBonus(meta, "maxHp")) * (1 + SKILL_VALUES.vitalityHp * sk("vitality")) * (meta.assist ? 1 + ASSIST.helpHp : 1);
-    const rangeMul = (1 + per("range") * (up.range || 0)) * (1 + bondBonus(meta, "range")) * (1 + SKILL_VALUES.rangeAdd * sk("range"));
-    const splashMul = (1 + per("splash") * (up.splash || 0)) * T2.splash * (1 + bondBonus(meta, "splash"));
-    const shield = sk("shield");
-    return {
-      maxHp: Math.round(PLAYER.maxHp * hpMul),
-      moveSpeed: PLAYER.moveSpeed * (1 + bondBonus(meta, "move")) * (1 + SKILL_VALUES.speedAdd * sk("speed")),
-      gooSlow: Math.min(0.95, PLAYER.gooSlow + SKILL_VALUES.speedGoo * sk("speed") + bondBonus(meta, "gooWalk")),
-      dps: PLAYER.dps * dmgMul * cheerMul,
-      range: (PLAYER.range + T2.range) * rangeMul,
-      width: PLAYER.streamWidth * T2.width * (1 + 0.05 * (up.power || 0)) * (1 + SKILL_VALUES.thickWidth * sk("thick")),
-      pressureCharge: PLAYER.pressureCharge / ((1 + per("pressure") * (up.pressure || 0)) * (1 + bondBonus(meta, "charge")) * (1 + SKILL_VALUES.turboCharge * sk("turbo"))),
-      pressureMax: (PLAYER.pressureMax + per("pressure") * (up.pressure || 0) + SKILL_VALUES.turboMax * sk("turbo")) * (1 + bondBonus(meta, "pressureMax")),
-      pressureDrain: PLAYER.pressureDrainMove * Math.pow(1 - SKILL_VALUES.keepDrain, sk("keep")),
-      invuln: PLAYER.invuln,
-      pickupRadius: PLAYER.pickupRadius * (1 + bondBonus(meta, "pickup")) * (1 + SKILL_VALUES.magnetRadius * sk("magnet")),
-      burstRadius: PLAYER.burstRadius * Math.sqrt(splashMul) * (1 + SKILL_VALUES.splashRadius * sk("splash")),
-      burstDmg: PLAYER.burstDamage * splashMul * (1 + SKILL_VALUES.splashDmg * sk("splash")),
-      burstClean: PLAYER.burstClean * Math.sqrt(splashMul) * (1 + SKILL_VALUES.splashRadius * sk("splash")),
-      armor: Math.max(0.5, 1 - bondBonus(meta, "armor")),
-      xpMult: (1 + bondBonus(meta, "xp")) * (1 + SKILL_VALUES.magnetXp * sk("magnet")),
-      coinMult: 1 + bondBonus(meta, "coins"),
-      multi: sk("multi"),
-      pierce: sk("pierce"),
-      chain: sk("chain"),
-      shieldRegen: shield ? SKILL_VALUES.shieldRegen[Math.min(shield, 3) - 1] : 0,
-      trail: sk("trail"),
-      rescueHeal: RESCUE.healOnRescue * (1 + bondBonus(meta, "rescueHeal")),
-      reviveHp: Math.min(1, PLAYER.reviveHp + bondBonus(meta, "revive")),
-      gunTier: tier,
-      cheerPer: RESCUE.cheerDamagePerAnimal
-    };
-  }
-
   // src/sim/run.ts
+  init_balance();
+  init_stats();
+  init_rng();
   var NO_MODS = { monsterHp: 1, monsterSpeed: 1, monsterDmg: 1, bulletSpeed: 1, playerDps: 1, bigMonsters: false, coinMul: 1 };
   function createRun(level2, meta, opts) {
     const stats = computeStats(meta, {}, 0);
@@ -3271,7 +4039,8 @@
       rng: new Rng(opts.seed ^ 1540483477),
       bestCombo: 0,
       daily: !!opts.daily,
-      cleanSum: 0
+      cleanSum: 0,
+      noHitRooms: 0
     };
   }
   function runScale(run) {
@@ -3707,7 +4476,7 @@
           if (!best) break;
           hitSet.add(best);
           this.damageMonster(best, dps * dt * SKILL_VALUES.chainDmg);
-          this.segs.push({ x0: from.x, y0: from.y, x1: best.x, y1: best.y, w: width * 0.55, kind: 2, hit: true });
+          this.segs.push({ x0: from.x, y0: from.y, x1: best.x, y1: best.y, w: width * 0.55, kind: 2, hit: true, hitId: best.id });
           from = best;
         }
       }
@@ -3773,6 +4542,7 @@
       let first = null;
       let endD = block;
       let hitAny = false;
+      let lastId = -1;
       const maxHits = 1 + pierce;
       for (let i = 0; i < hits.length && i < maxHits; i++) {
         const h2 = hits[i];
@@ -3783,13 +4553,14 @@
         }
         if (h2.c) this.damageCocoon(h2.c, dmg * mul);
         hitAny = true;
+        lastId = h2.m ? h2.m.id : -1;
         endD = h2.d + h2.r * 0.6;
         if (i === maxHits - 1 || i === hits.length - 1) {
           if (pierce > 0 && i < maxHits - 1) endD = block;
         }
       }
       if (pierce > 0 && hitAny && hits.length < maxHits) endD = block;
-      this.segs.push({ x0: ox, y0: oy, x1: ox + dx * endD, y1: oy + dy * endD, w: width, kind, hit: hitAny || endD < len - 2 });
+      this.segs.push({ x0: ox, y0: oy, x1: ox + dx * endD, y1: oy + dy * endD, w: width, kind, hit: hitAny || endD < len - 2, hitId: pierce > 0 && endD >= block ? -1 : lastId });
       return first;
     }
     damageMonster(m, dmg) {
@@ -4546,6 +5317,7 @@
   }
 
   // src/game/play.ts
+  init_analytics();
   var DT = 1 / 60;
   var PlayScreen = class {
     constructor(o, uiRoot, onDone) {
@@ -4662,7 +5434,7 @@
       this.lastHp = -1;
       this.updateRoomDots();
       audio.playMusic(this.run.level.boss && i === this.run.level.rooms.length - 1 ? "bgm_boss" : `bgm_${this.run.level.region}`);
-      if (this.o.newMonster && !this.introShown && this.sim.def.monsters.some((m) => m.t === this.o.newMonster)) {
+      if (this.o.newMonster && !this.o.tutorial && !this.introShown && this.sim.def.monsters.some((m) => m.t === this.o.newMonster)) {
         this.introShown = true;
         const k = this.o.newMonster;
         setTimeout(() => this.showBanner(t("toast.newMonster"), t(`monster.${k}`), t(`monster.${k}.desc`), `m_${k === "boss" ? "boss_" + this.run.level.region : k === "flyer" ? "flyer" : k}_normal${k === "flyer" ? "_0" : ""}`), 500);
@@ -4823,6 +5595,7 @@
           audio.play("room_clear", { vol: 0.9 });
           buzz("success");
           this.announce(t("toast.clean"), "", "clean");
+          if (!this.sim.hitThisRoom) run.noHitRooms++;
           track("room_clear", { stage: run.stage, room: run.roomIndex, seconds: Math.round(run.time - this.roomStart), hit: this.sim.hitThisRoom });
           if (run.stage === 1 && run.roomIndex === 0 && this.o.tutorial) track("tutorial_step", { step: "first_room", t: Math.round(run.time) });
           break;
@@ -4993,6 +5766,10 @@
       });
       const body = h("div", { class: "levelup" }, h("div", { class: "levelup-sub" }, t("levelup.pick")), ...cards);
       openModal(body, { id: "levelup", title: t("levelup.title"), titleIcon: "p_star", closable: false, cls: "modal-levelup" });
+      if (this.bot) setTimeout(() => {
+        ready = true;
+        pick(this.bot.chooseSkill(choices, this.sim.player.hp / this.run.stats.maxHp));
+      }, 900);
       void xpToNext;
     }
     // ---------------------------------------------------------------- pause / revive / end
@@ -5081,27 +5858,1773 @@
   };
 
   // src/app.ts
+  init_progress();
+  init_save();
+  init_analytics();
+
+  // src/ui/home.ts
+  init_balance();
+  init_progress();
+  init_save();
+
+  // src/render/mapView.ts
+  init_balance();
+  init_quality();
+  init_rng();
+  var MAP_W = 576;
+  var STEP = 124;
+  var TOP = 260;
+  var BOTTOM = 220;
+  var MAP_H = TOP + BOTTOM + (STAGE_COUNT - 1) * STEP + 3 * 140;
+  var T2 = 48;
+  var CHUNK = 480;
+  function regionOf(stage) {
+    return stage <= 10 ? "forest" : stage <= 20 ? "village" : "lake";
+  }
+  function buildNodes() {
+    const out = [];
+    for (let i = 0; i < STAGE_COUNT; i++) {
+      const s = i + 1;
+      const reg = Math.floor(i / 10);
+      const y = MAP_H - BOTTOM - i * STEP - reg * 140;
+      const x = MAP_W / 2 + Math.sin(i * 0.95 + 0.4) * 150 + Math.sin(i * 2.1) * 18;
+      out.push({ stage: s, x, y, region: regionOf(s), boss: s % 10 === 0 });
+    }
+    return out;
+  }
+  var MapView = class {
+    constructor() {
+      this.nodes = buildNodes();
+      this.scroll = 0;
+      // world y at the top of the view
+      this.vel = 0;
+      this.scale = 1;
+      this.viewW = 0;
+      this.viewH = 0;
+      this.top = 0;
+      this.bottom = 0;
+      this.time = 0;
+      this.fx = new Particles();
+      this.chunks = /* @__PURE__ */ new Map();
+      this.props = [];
+      this.rng = new Rng(4242);
+      this.cleared = () => false;
+      this.current = 1;
+      this.newFriendAt = /* @__PURE__ */ new Set();
+      this.washing = null;
+      this.gooCache = /* @__PURE__ */ new Map();
+      this.regionLabel = (k) => k;
+      this.buildProps();
+    }
+    regionBand(y) {
+      const i = this.nodes.findIndex((n2) => n2.y < y + STEP / 2);
+      const n = this.nodes[Math.max(0, i)];
+      return y > MAP_H - BOTTOM - 9.5 * STEP ? "forest" : y > MAP_H - BOTTOM - 19.5 * STEP - 140 ? n?.region ?? "village" : "lake";
+    }
+    bandAt(y) {
+      const fEnd = this.nodes[9].y - 70, vEnd = this.nodes[19].y - 70;
+      return y > fEnd ? "forest" : y > vEnd ? "village" : "lake";
+    }
+    buildProps() {
+      const r = this.rng;
+      const nearPath = (x, y) => {
+        for (let i = 0; i < this.nodes.length - 1; i++) {
+          const a = this.nodes[i], b = this.nodes[i + 1];
+          for (let k = 0; k <= 8; k++) {
+            const px = a.x + (b.x - a.x) * k / 8, py = a.y + (b.y - a.y) * k / 8;
+            if (Math.hypot(px - x, py - y) < 70) return true;
+          }
+        }
+        return false;
+      };
+      for (let i = 0; i < 260; i++) {
+        const x = r.range(-20, MAP_W + 20), y = r.range(40, MAP_H - 20);
+        if (nearPath(x, y)) continue;
+        const band = this.bandAt(y);
+        let name = band === "forest" ? r.pick(["ob_tree", "ob_tree2", "ob_pine", "ob_bush", "ob_tree", "ob_pine"]) : band === "village" ? r.pick(["ob_tree", "ob_bush", "ob_hay", "ob_barrel", "ob_tree2", "ob_bush"]) : r.pick(["ob_reeds", "ob_tree", "ob_shellrock", "ob_bush", "ob_reeds"]);
+        if (band === "lake" && this.isLakeWater(x, y)) {
+          if (r.chance(0.7)) continue;
+          name = "ob_reeds";
+        }
+        this.props.push({ name, x, y, s: r.range(0.75, 1), flip: r.chance(0.5) });
+      }
+      const v = this.nodes[14];
+      this.props.push({ name: "ob_windmill", x: v.x > MAP_W / 2 ? 110 : MAP_W - 110, y: v.y + 40, s: 0.9, flip: false });
+      for (const k of [11, 16, 18]) {
+        const n = this.nodes[k];
+        this.props.push({ name: k % 2 ? "ob_house" : "ob_house2", x: n.x > MAP_W / 2 ? 96 : MAP_W - 96, y: n.y + 30, s: 0.55, flip: false });
+      }
+      this.props.sort((a, b) => a.y - b.y);
+    }
+    isLakeWater(x, y) {
+      const top = this.nodes[29].y - 120, bot = this.nodes[20].y + 60;
+      if (y < top || y > bot) return false;
+      const cy = (top + bot) / 2;
+      return Math.hypot((x - MAP_W * 0.5) / 1.1, (y - cy) / 2.6) < 120 && !this.onTrail(x, y);
+    }
+    onTrail(x, y) {
+      for (let i = 0; i < this.nodes.length - 1; i++) {
+        const a = this.nodes[i], b = this.nodes[i + 1];
+        for (let k = 0; k <= 10; k++) {
+          const px = a.x + (b.x - a.x) * k / 10, py = a.y + (b.y - a.y) * k / 10;
+          if (Math.hypot(px - x, py - y) < 60) return true;
+        }
+      }
+      return false;
+    }
+    layout(viewW, viewH, top, bottom) {
+      this.viewW = viewW;
+      this.viewH = viewH;
+      this.top = top;
+      this.bottom = bottom;
+      this.scale = Math.min(viewW / MAP_W, 1.6);
+      this.clampScroll();
+    }
+    visibleH() {
+      return (this.viewH - this.top - this.bottom) / this.scale;
+    }
+    clampScroll() {
+      const max = MAP_H - this.visibleH();
+      this.scroll = Math.max(0, Math.min(max, this.scroll));
+    }
+    focus(stage) {
+      const n = this.nodes[Math.max(0, Math.min(this.nodes.length - 1, stage - 1))];
+      this.scroll = n.y - this.visibleH() * 0.58;
+      this.vel = 0;
+      this.clampScroll();
+    }
+    screenToWorld(sx, sy) {
+      const ox = (this.viewW - MAP_W * this.scale) / 2;
+      return [(sx - ox) / this.scale, (sy - this.top) / this.scale + this.scroll];
+    }
+    worldToScreen(x, y) {
+      const ox = (this.viewW - MAP_W * this.scale) / 2;
+      return [ox + x * this.scale, this.top + (y - this.scroll) * this.scale];
+    }
+    hitNode(sx, sy) {
+      const [x, y] = this.screenToWorld(sx, sy);
+      let best = null, bd = 56;
+      for (const n of this.nodes) {
+        const d = Math.hypot(n.x - x, n.y - 10 - y);
+        if (d < bd) {
+          bd = d;
+          best = n;
+        }
+      }
+      return best;
+    }
+    // ---------------------------------------------------------------- chunks (static ground + trail)
+    chunk(i) {
+      let c = this.chunks.get(i);
+      if (c) return c;
+      const sc = quality().bgScale;
+      c = document.createElement("canvas");
+      c.width = Math.round(MAP_W * sc);
+      c.height = Math.round(CHUNK * sc);
+      const g = c.getContext("2d");
+      g.scale(sc, sc);
+      g.translate(0, -i * CHUNK);
+      const y0 = i * CHUNK, y1 = y0 + CHUNK;
+      for (let ty = Math.floor(y0 / T2) * T2; ty < y1; ty += T2) for (let tx = 0; tx < MAP_W; tx += T2) {
+        const hsh = (tx * 73856093 ^ ty * 19349663) >>> 0;
+        const v = hsh % 10;
+        const f = frame(`g_${v < 4 ? 0 : v < 7 ? 1 : v < 9 ? 2 : 3}`);
+        if (f) g.drawImage(f.img, f.x, f.y, f.w, f.h, tx, ty, T2 + 0.5, T2 + 0.5);
+      }
+      const cell = (cx, cy) => this.isLakeWater(cx * T2 + T2 / 2, cy * T2 + T2 / 2) ? "w" : ".";
+      for (let j = Math.floor(y0 / T2); j <= Math.ceil(y1 / T2); j++) for (let k = 0; k <= MAP_W / T2; k++) {
+        let m = 0;
+        if (cell(k - 1, j - 1) === "w") m |= 1;
+        if (cell(k, j - 1) === "w") m |= 2;
+        if (cell(k - 1, j) === "w") m |= 4;
+        if (cell(k, j) === "w") m |= 8;
+        if (!m) continue;
+        const f = frame(`t_water_${m}`);
+        if (f) g.drawImage(f.img, f.x, f.y, f.w, f.h, (k - 0.5) * T2, (j - 0.5) * T2, T2 + 0.5, T2 + 0.5);
+      }
+      g.lineCap = "round";
+      g.lineJoin = "round";
+      const trail = () => {
+        g.beginPath();
+        this.nodes.forEach((n, k) => {
+          if (k === 0) g.moveTo(n.x, n.y + 120);
+          const prev = this.nodes[k - 1];
+          if (prev) {
+            const mx = (prev.x + n.x) / 2, my = (prev.y + n.y) / 2;
+            g.quadraticCurveTo(prev.x + (mx - prev.x) * 0.2, my + 20, n.x, n.y);
+          } else g.lineTo(n.x, n.y);
+        });
+      };
+      trail();
+      g.strokeStyle = "#b47b47";
+      g.lineWidth = 44;
+      g.stroke();
+      trail();
+      g.strokeStyle = "#d9a46a";
+      g.lineWidth = 36;
+      g.stroke();
+      trail();
+      g.setLineDash([2, 22]);
+      g.strokeStyle = "rgba(255,240,210,0.9)";
+      g.lineWidth = 7;
+      g.stroke();
+      g.setLineDash([]);
+      const rr = new Rng(i * 7 + 3);
+      for (let k = 0; k < 18; k++) {
+        const x = rr.range(0, MAP_W), y = rr.range(y0, y1);
+        const f = frame(rr.pick(["d_flower_0", "d_flower_1", "d_flower_2", "d_tuft", "d_clover", "d_pebble_0", "d_tuft"]));
+        if (f && !this.isLakeWater(x, y)) drawFrame(g, f, x, y, 0.9);
+      }
+      this.chunks.set(i, c);
+      if (this.chunks.size > 7) {
+        const first = this.chunks.keys().next().value;
+        if (first !== i) this.chunks.delete(first);
+      }
+      return c;
+    }
+    invalidate() {
+      this.chunks.clear();
+    }
+    gooFor(stage) {
+      let g = this.gooCache.get(stage);
+      if (!g) {
+        const n = this.nodes[stage - 1];
+        const r = new Rng(stage * 977);
+        g = [];
+        for (let k = 0; k < 5; k++) {
+          const a = r.range(0, 6.28), d = r.range(14, 60);
+          g.push([n.x + Math.cos(a) * d, n.y + Math.sin(a) * d * 0.7 + 6, r.range(36, 58), r.int(0, 3)]);
+        }
+        this.gooCache.set(stage, g);
+      }
+      return g;
+    }
+    // ---------------------------------------------------------------- frame
+    update(dt) {
+      this.time += dt;
+      this.fx.update(dt);
+      if (Math.abs(this.vel) > 1) {
+        this.scroll += this.vel * dt;
+        this.vel *= Math.pow(0.04, dt);
+        this.clampScroll();
+      } else this.vel = 0;
+      if (this.washing) {
+        this.washing.t += dt;
+        const n = this.nodes[this.washing.stage - 1];
+        if (this.washing.t < 1.2 && this.fx.count() < 120) {
+          const a = this.rng.range(0, 6.28), d = this.rng.range(0, 70);
+          this.fx.spawn(["p_sparkle_0", "p_sparkle_1", "p_sparkle_2"], n.x + Math.cos(a) * d, n.y + Math.sin(a) * d * 0.7, { fps: 10, max: 0.5, scale: 1.2 });
+          this.fx.spawn("p_water", n.x + this.rng.range(-50, 50), n.y, { z: 10, vz: this.rng.range(150, 300), vx: this.rng.range(-120, 120), g: 700, max: 0.7 });
+        }
+        if (this.washing.t > 1.6) this.washing = null;
+      }
+    }
+    render(ctx2, dpr) {
+      const s = this.scale;
+      const ox = (this.viewW - MAP_W * s) / 2;
+      ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx2.fillStyle = "#3f7a2a";
+      ctx2.fillRect(0, 0, this.viewW, this.viewH);
+      ctx2.setTransform(dpr * s, 0, 0, dpr * s, dpr * ox, dpr * (this.top - this.scroll * s));
+      const y0 = this.scroll - 60, y1 = this.scroll + this.visibleH() + (this.bottom + 60) / s;
+      for (let i = Math.max(0, Math.floor(y0 / CHUNK)); i <= Math.floor(y1 / CHUNK); i++) {
+        if (i * CHUNK > MAP_H) break;
+        ctx2.drawImage(this.chunk(i), 0, i * CHUNK, MAP_W, CHUNK);
+      }
+      for (const n of this.nodes) {
+        if (n.y < y0 - 100 || n.y > y1 + 100) continue;
+        const done = this.cleared(n.stage);
+        let k = done ? 0 : 1;
+        if (this.washing && this.washing.stage === n.stage) k = Math.max(0, 1 - this.washing.t / 1);
+        if (k <= 0) continue;
+        for (const [x, y, r, st] of this.gooFor(n.stage)) {
+          const f = frame(`goostamp_${st}`);
+          if (f) drawFrame(ctx2, f, x, y, r * 2 * k / 112 * 1.1, false, n.stage, 0.92);
+        }
+      }
+      const items = [];
+      for (const p of this.props) if (p.y > y0 - 40 && p.y < y1 + 220) items.push({ y: p.y, f: () => draw(ctx2, p.name, p.x, p.y, p.s, p.flip) });
+      for (const n of this.nodes) if (n.y > y0 - 60 && n.y < y1 + 120) items.push({ y: n.y, f: () => this.drawNode(ctx2, n) });
+      items.sort((a, b) => a.y - b.y);
+      for (const it of items) it.f();
+      for (const [stage, key] of [[1, "forest"], [11, "village"], [21, "lake"]]) {
+        const n = this.nodes[stage - 1];
+        const sy = n.y + 96;
+        if (sy < y0 - 80 || sy > y1 + 160) continue;
+        const sx = n.x > MAP_W / 2 ? n.x - 150 : n.x + 150;
+        draw(ctx2, "mp_sign", sx, sy, 0.62);
+        ctx2.save();
+        ctx2.font = `22px "Fredoka","Jua",sans-serif`;
+        ctx2.textAlign = "center";
+        ctx2.textBaseline = "middle";
+        ctx2.lineWidth = 4;
+        ctx2.strokeStyle = "#6b4a32";
+        ctx2.fillStyle = "#fff6e2";
+        const label = this.regionLabel(key);
+        ctx2.strokeText(label, sx, sy - 57);
+        ctx2.fillText(label, sx, sy - 57);
+        ctx2.restore();
+      }
+      this.fx.draw(ctx2, false);
+    }
+    drawNode(ctx2, n) {
+      const done = this.cleared(n.stage);
+      const cur = n.stage === this.current;
+      const locked = n.stage > this.current && !done;
+      const bob = cur ? Math.sin(this.time * 4) * 3 : 0;
+      if (cur) {
+        ctx2.save();
+        ctx2.globalAlpha = 0.45 + Math.sin(this.time * 4) * 0.2;
+        ctx2.fillStyle = "#fff6a0";
+        ctx2.beginPath();
+        ctx2.ellipse(n.x, n.y + 4, 50, 28, 0, 0, Math.PI * 2);
+        ctx2.fill();
+        ctx2.restore();
+      }
+      draw(ctx2, n.boss ? "mp_node_boss" : "mp_node", n.x, n.y + 8, 0.9, false, 0, locked ? 0.75 : 1);
+      ctx2.save();
+      ctx2.font = `${n.boss ? 26 : 23}px "Fredoka","Jua",sans-serif`;
+      ctx2.textAlign = "center";
+      ctx2.textBaseline = "middle";
+      ctx2.lineWidth = 5;
+      ctx2.strokeStyle = "#3a2416";
+      ctx2.fillStyle = locked ? "#cfd6dc" : "#ffffff";
+      const label = String((n.stage - 1) % 10 + 1);
+      ctx2.strokeText(label, n.x, n.y - 4);
+      ctx2.fillText(label, n.x, n.y - 4);
+      ctx2.restore();
+      if (n.boss) draw(ctx2, "ic_crown", n.x, n.y - 38, 0.45);
+      if (done) draw(ctx2, "mp_flag", n.x + 26, n.y - 2, 0.7);
+      if (locked && n.stage === this.current + 1) draw(ctx2, "ic_lock", n.x + 24, n.y - 20, 0.32);
+      if (this.newFriendAt.has(n.stage) && !locked) {
+        const fy = n.y - 64 + Math.sin(this.time * 3 + n.stage) * 3;
+        draw(ctx2, "mk_help", n.x - 30, fy, 0.75);
+      }
+      if (cur) draw(ctx2, "mk_arrow", n.x, n.y - 70 + bob * 2, 0.6, false, Math.PI);
+    }
+    // drag scrolling
+    drag(dy) {
+      this.scroll -= dy / this.scale;
+      this.clampScroll();
+    }
+    fling(vy) {
+      this.vel = -vy / this.scale;
+    }
+    ensureVisible(stage) {
+      const n = this.nodes[stage - 1];
+      if (n.y < this.scroll + 80 || n.y > this.scroll + this.visibleH() - 80) this.focus(stage);
+    }
+    regionAt(stage) {
+      return regionOf(stage);
+    }
+    void_() {
+      void this.regionBand;
+    }
+  };
+
+  // src/render/shelterView.ts
+  init_balance();
+  init_rng();
+  var SH_W = 400;
+  var T3 = 48;
+  var DECOR_POS = {
+    ball: [0.32, 0.35],
+    cushion: [0.18, 0.08],
+    bowl: [0.82, 0.08],
+    flowers: [0.16, 0.86],
+    pond: [0.78, 0.5],
+    treehouse: [0.1, 0.42],
+    slide: [0.84, 0.88],
+    fountain: [0.5, 0.62]
+  };
+  var ShelterView = class {
+    constructor() {
+      this.W = SH_W;
+      this.H = 900;
+      this.scale = 1;
+      this.top = 0;
+      this.bottom = 0;
+      this.viewW = 0;
+      this.viewH = 0;
+      this.pets = [];
+      this.missing = [];
+      this.decor = [];
+      this.fx = new Particles();
+      this.time = 0;
+      this.rng = new Rng(99);
+      this.bg = null;
+      this.baskets = [];
+      this.giftsReady = 0;
+    }
+    layout(viewW, viewH, top, bottom) {
+      this.viewW = viewW;
+      this.viewH = viewH;
+      this.top = top;
+      this.bottom = bottom;
+      const availH = viewH - top - bottom;
+      this.scale = viewW / SH_W;
+      this.H = Math.max(520, Math.round(availH / this.scale));
+      this.bg = null;
+      this.placeBaskets();
+      for (const p of this.pets) {
+        p.y = Math.min(p.y, this.yardBottom());
+      }
+    }
+    houseY() {
+      return 112;
+    }
+    basketRows() {
+      return Math.ceil(this.missing.length / 6);
+    }
+    yardTop() {
+      return this.houseY() + 30 + this.basketRows() * 50;
+    }
+    yardBottom() {
+      return this.H - 26;
+    }
+    setData(counts, bondOf, decor) {
+      this.decor = decor.slice();
+      const want = [];
+      for (const s of SPECIES) {
+        const n = counts[s.id] || 0;
+        if (n > 0) {
+          const k = Math.min(3, Math.max(1, bondOf(s.id)));
+          for (let i = 0; i < k; i++) want.push(s.id);
+        }
+      }
+      const next = [];
+      const pool = this.pets.slice();
+      let id = 1;
+      for (const sp of want.slice(0, 26)) {
+        const i = pool.findIndex((p) => p.sp === sp);
+        if (i >= 0) {
+          next.push(pool[i]);
+          pool.splice(i, 1);
+          continue;
+        }
+        const x = this.rng.range(50, SH_W - 50), y = this.rng.range(this.yardTop() + 20, this.yardBottom());
+        next.push({ sp, x, y, tx: x, ty: y, state: "idle", t: this.rng.range(0.5, 3), facing: this.rng.chance(0.5) ? 1 : -1, gift: false, id: id++, target: null });
+      }
+      next.forEach((p, i) => p.id = i + 1);
+      this.pets = next;
+      this.missing = SPECIES.filter((s) => !(counts[s.id] || 0)).map((s) => s.id);
+      this.placeBaskets();
+      this.bg = null;
+    }
+    arrive(sp) {
+      const p = this.pets.find((q) => q.sp === sp);
+      if (!p) return;
+      p.x = SH_W / 2;
+      p.y = this.houseY() + 14;
+      p.state = "happy";
+      p.t = 1.6;
+      p.tx = SH_W / 2 + this.rng.range(-80, 80);
+      p.ty = this.yardTop() + 60;
+      for (let i = 0; i < 10; i++) this.fx.spawn("p_heart", p.x, p.y - 30, { z: 10, vz: this.rng.range(120, 260), vx: this.rng.range(-120, 120), vy: this.rng.range(-40, 40), g: 250, max: 1.3, drag: 1 });
+    }
+    placeBaskets() {
+      this.baskets = [];
+      const n = this.missing.length;
+      if (!n) return;
+      const perRow = 6;
+      const gap = 58;
+      for (let i = 0; i < n; i++) {
+        const row = Math.floor(i / perRow), col = i % perRow;
+        const inRow = Math.min(perRow, n - row * perRow);
+        const x0 = SH_W / 2 - (inRow - 1) * gap / 2;
+        this.baskets.push({ sp: this.missing[i], x: x0 + col * gap, y: this.houseY() + 62 + row * 50 });
+      }
+    }
+    setGifts(n) {
+      this.giftsReady = n;
+      const k = n <= 0 ? 0 : Math.min(Math.ceil(this.pets.length / 3), 5, Math.max(1, Math.floor(n / 15)));
+      this.pets.forEach((p, i) => p.gift = i < k);
+    }
+    screenToWorld(sx, sy) {
+      return [sx / this.scale, (sy - this.top) / this.scale];
+    }
+    hitPet(sx, sy) {
+      const [x, y] = this.screenToWorld(sx, sy);
+      let best = null, bd = 44;
+      for (const p of this.pets) {
+        const d = Math.hypot(p.x - x, p.y - 22 - y);
+        if (d < bd) {
+          bd = d;
+          best = p;
+        }
+      }
+      return best;
+    }
+    hitBasket(sx, sy) {
+      const [x, y] = this.screenToWorld(sx, sy);
+      for (const b of this.baskets) if (Math.hypot(b.x - x, b.y - 16 - y) < 34) return b.sp;
+      return null;
+    }
+    poke(p) {
+      p.state = "happy";
+      p.t = 1;
+      for (let i = 0; i < 4; i++) this.fx.spawn("p_heart", p.x, p.y - 40, { vy: -90, vx: this.rng.range(-50, 50), max: 0.8, scale: 0.7 });
+    }
+    decorSpot(id) {
+      const d = DECOR_POS[id];
+      return [30 + d[0] * (SH_W - 60), this.yardTop() + (this.yardBottom() - this.yardTop()) * d[1]];
+    }
+    update(dt) {
+      this.time += dt;
+      this.fx.update(dt);
+      const r = this.rng;
+      for (const p of this.pets) {
+        p.t -= dt;
+        if (p.state === "walk") {
+          const dx = p.tx - p.x, dy = p.ty - p.y;
+          const d = Math.hypot(dx, dy);
+          if (d < 4) {
+            p.state = p.target === "cushion" || p.target === "treehouse" ? "sleep" : p.target === "ball" || p.target === "slide" ? "play" : "idle";
+            p.t = r.range(2, 6);
+          } else {
+            const sp = 40;
+            p.x += dx / d * sp * dt;
+            p.y += dy / d * sp * dt;
+            if (Math.abs(dx) > 2) p.facing = dx > 0 ? 1 : -1;
+          }
+        } else if (p.t <= 0) {
+          const roll = r.next();
+          const owned = this.decor.filter((d) => DECOR_POS[d]);
+          if (owned.length && roll < 0.35) {
+            const d = r.pick(owned);
+            const [x, y] = this.decorSpot(d);
+            p.tx = x + r.range(-40, 40);
+            p.ty = y + r.range(4, 30);
+            p.target = d;
+            p.state = "walk";
+          } else if (roll < 0.75) {
+            p.tx = r.range(40, SH_W - 40);
+            p.ty = r.range(this.yardTop() + 20, this.yardBottom());
+            p.target = null;
+            p.state = "walk";
+          } else if (roll < 0.88) {
+            p.state = "sleep";
+            p.t = r.range(3, 7);
+          } else {
+            p.state = "idle";
+            p.t = r.range(1.5, 4);
+          }
+        }
+      }
+    }
+    buildBg() {
+      const sc = Math.min(2, this.scale * 2);
+      const c = document.createElement("canvas");
+      c.width = Math.round(SH_W * sc);
+      c.height = Math.round(this.H * sc);
+      const g = c.getContext("2d");
+      g.scale(sc, sc);
+      for (let y = 0; y < this.H; y += T3) for (let x = 0; x < SH_W; x += T3) {
+        const h2 = (x * 73856093 ^ y * 19349663) >>> 0;
+        const v = h2 % 10;
+        const f = frame(`g_${v < 4 ? 0 : v < 7 ? 1 : v < 9 ? 2 : 3}`);
+        if (f) g.drawImage(f.img, f.x, f.y, f.w, f.h, x, y, T3 + 0.5, T3 + 0.5);
+      }
+      g.lineCap = "round";
+      g.strokeStyle = "#b47b47";
+      g.lineWidth = 46;
+      g.beginPath();
+      g.moveTo(SH_W / 2, this.houseY());
+      g.quadraticCurveTo(SH_W / 2 - 40, this.H * 0.6, SH_W / 2, this.H + 40);
+      g.stroke();
+      g.strokeStyle = "#d9a46a";
+      g.lineWidth = 38;
+      g.stroke();
+      const rr = new Rng(5);
+      for (let i = 0; i < 34; i++) {
+        const f = frame(rr.pick(["d_flower_0", "d_flower_1", "d_flower_2", "d_flower_3", "d_tuft", "d_clover", "d_tuft"]));
+        if (f) drawFrame(g, f, rr.range(16, SH_W - 16), rr.range(this.houseY() + 20, this.H - 10), 1);
+      }
+      const vg = g.createRadialGradient(SH_W / 2, this.H * 0.55, this.H * 0.3, SH_W / 2, this.H * 0.55, this.H * 0.85);
+      vg.addColorStop(0, "rgba(0,0,0,0)");
+      vg.addColorStop(1, "rgba(20,50,10,0.25)");
+      g.fillStyle = vg;
+      g.fillRect(0, 0, SH_W, this.H);
+      return c;
+    }
+    render(ctx2, dpr) {
+      if (!this.bg) this.bg = this.buildBg();
+      const s = this.scale;
+      ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx2.fillStyle = "#3f7a2a";
+      ctx2.fillRect(0, 0, this.viewW, this.viewH);
+      ctx2.setTransform(dpr * s, 0, 0, dpr * s, 0, dpr * this.top);
+      ctx2.drawImage(this.bg, 0, 0, SH_W, this.H);
+      const items = [];
+      for (const [x, y, n] of [[30, 96, "ob_tree"], [372, 92, "ob_tree2"], [86, 70, "ob_pine"], [318, 66, "ob_pine"]]) items.push({ y, f: () => draw(ctx2, n, x, y, 0.75) });
+      items.push({ y: this.houseY(), f: () => draw(ctx2, "sh_house", SH_W / 2, this.houseY(), 0.55) });
+      for (let y = this.houseY() + 40; y < this.H + 100; y += 140) {
+        items.push({ y: y + 140, f: () => {
+          draw(ctx2, "ob_fencev", 8, y + 140, 0.7);
+          draw(ctx2, "ob_fencev", SH_W - 8, y + 140, 0.7);
+        } });
+      }
+      for (const d of this.decor) {
+        if (!DECOR_POS[d]) continue;
+        const [x, y] = this.decorSpot(d);
+        items.push({ y: y + (d === "pond" ? -40 : 0), f: () => draw(ctx2, `dc_${d}`, x, y, d === "treehouse" ? 0.6 : d === "pond" || d === "fountain" || d === "slide" ? 0.65 : 0.75) });
+      }
+      for (const b of this.baskets) items.push({ y: b.y, f: () => {
+        draw(ctx2, "sh_basket", b.x, b.y, 0.62);
+        draw(ctx2, `sil_${b.sp}`, b.x, b.y - 26, 0.46, false, 0, 0.9);
+        drawText(ctx2, "?", b.x + 16, b.y - 40, 16);
+      } });
+      for (const p of this.pets) items.push({ y: p.y, f: () => this.drawPet(ctx2, p) });
+      items.sort((a, b) => a.y - b.y);
+      const sh = frame("shadow");
+      if (sh) for (const p of this.pets) drawFrame(ctx2, sh, p.x, p.y + 2, 0.55, false, 0, 0.7);
+      for (const it of items) it.f();
+      this.fx.draw(ctx2, false);
+    }
+    drawPet(ctx2, p) {
+      const t2 = this.time + p.id * 0.37;
+      let name;
+      let lift = 0;
+      if (p.state === "walk") name = `a_${p.sp}_walk_${Math.floor(t2 * 8) % 4}`;
+      else if (p.state === "sleep") name = `a_${p.sp}_sleep_${Math.floor(t2 * 1.2) % 2}`;
+      else if (p.state === "happy") {
+        name = `a_${p.sp}_happy_${Math.floor(t2 * 10) % 3}`;
+        lift = Math.abs(Math.sin(t2 * 9)) * 10;
+      } else if (p.state === "play") {
+        name = `a_${p.sp}_happy_${Math.floor(t2 * 6) % 3}`;
+        lift = Math.abs(Math.sin(t2 * 6)) * 8;
+      } else name = `a_${p.sp}_idle_${Math.sin(t2 * 0.8) > 0.97 ? 1 : 0}`;
+      draw(ctx2, name, p.x, p.y - lift, 0.9, p.facing < 0);
+      if (p.state === "sleep") draw(ctx2, "mk_zzz", p.x + 18, p.y - 46 - Math.sin(t2 * 2) * 3, 0.7, false, 0, 0.9);
+      if (p.gift) draw(ctx2, "mk_excl", p.x, p.y - 62 + Math.sin(t2 * 4) * 4, 0.75);
+    }
+  };
+  function drawText(ctx2, s, x, y, size) {
+    ctx2.save();
+    ctx2.font = `${size}px "Fredoka","Jua",sans-serif`;
+    ctx2.textAlign = "center";
+    ctx2.textBaseline = "middle";
+    ctx2.lineWidth = 4;
+    ctx2.strokeStyle = "#3a2416";
+    ctx2.fillStyle = "#fff";
+    ctx2.strokeText(s, x, y);
+    ctx2.fillText(s, x, y);
+    ctx2.restore();
+  }
+
+  // src/ui/home.ts
+  init_stats();
+  init_analytics();
+
+  // src/ui/upgrades.ts
+  init_balance();
+  init_progress();
+  init_save();
+
+  // src/render/preview.ts
+  var StreamPreview = class {
+    constructor() {
+      this.fx = new Particles();
+      this.t = 0;
+      this.width = 12;
+      this.range = 250;
+      this.tier = 0;
+      this.shownW = 12;
+      this.shownR = 250;
+      this.pulse = 0;
+      this.blobHp = 1;
+      this.blobPop = 0;
+      this.dpr = Math.min(2, window.devicePixelRatio || 1);
+      this.raf = 0;
+      this.last = 0;
+      this.alive = true;
+      this.canvas = document.createElement("canvas");
+      this.canvas.className = "preview";
+      this.ctx = this.canvas.getContext("2d");
+      const loop = (ts) => {
+        if (!this.alive) return;
+        this.raf = requestAnimationFrame(loop);
+        if (!this.canvas.isConnected) return;
+        const dt = this.last ? Math.min(0.05, (ts - this.last) / 1e3) : 0.016;
+        this.last = ts;
+        this.frame(dt);
+      };
+      this.raf = requestAnimationFrame(loop);
+    }
+    set(width, range, tier, celebrate = false) {
+      this.width = width;
+      this.range = range;
+      this.tier = tier;
+      if (celebrate) {
+        this.pulse = 1;
+        for (let i = 0; i < 10; i++) this.fx.spawn(["p_sparkle_0", "p_sparkle_1", "p_sparkle_2"], 70 + Math.random() * 220, 40 + Math.random() * 60, { fps: 10, max: 0.6, scale: 1.2 });
+      }
+    }
+    frame(dt) {
+      const cw = this.canvas.clientWidth, ch = this.canvas.clientHeight;
+      if (!cw || !ch) return;
+      if (this.canvas.width !== Math.round(cw * this.dpr)) {
+        this.canvas.width = Math.round(cw * this.dpr);
+        this.canvas.height = Math.round(ch * this.dpr);
+      }
+      this.t += dt;
+      this.fx.update(dt);
+      this.shownW += (this.width - this.shownW) * Math.min(1, dt * 5);
+      this.shownR += (this.range - this.shownR) * Math.min(1, dt * 5);
+      this.pulse = Math.max(0, this.pulse - dt * 1.5);
+      const g = this.ctx;
+      const W = 400, H = 150;
+      const k = Math.min(cw / W, ch / H);
+      g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      const grd = g.createLinearGradient(0, 0, 0, ch);
+      grd.addColorStop(0, "#bfeaff");
+      grd.addColorStop(0.55, "#e6f7ff");
+      grd.addColorStop(0.56, "#9bd86a");
+      grd.addColorStop(1, "#6fb64a");
+      g.fillStyle = grd;
+      g.fillRect(0, 0, cw, ch);
+      g.setTransform(this.dpr * k, 0, 0, this.dpr * k, this.dpr * (cw - W * k) / 2, this.dpr * (ch - H * k) / 2);
+      const kx = 62, ky = 128;
+      const reach = Math.min(300, 60 + this.shownR * 0.75);
+      g.save();
+      g.strokeStyle = "rgba(255,255,255,0.8)";
+      g.lineWidth = 3;
+      g.setLineDash([8, 8]);
+      g.beginPath();
+      g.moveTo(kx + 10, ky + 8);
+      g.lineTo(kx + reach + 20, ky + 8);
+      g.stroke();
+      g.restore();
+      const bx = kx + reach + 18, by = ky - 6;
+      this.blobHp -= dt * (0.25 + this.shownW * 0.025);
+      if (this.blobHp <= 0) {
+        this.blobHp = 1;
+        this.blobPop = 0.4;
+        for (let i = 0; i < 12; i++) this.fx.spawn("p_goo_violet", bx, by - 20, { z: 10, vz: 150 + Math.random() * 200, vx: (Math.random() - 0.5) * 300, g: 800, max: 0.6 });
+        for (let i = 0; i < 8; i++) this.fx.spawn("p_water", bx, by - 20, { z: 10, vz: 200 + Math.random() * 200, vx: (Math.random() - 0.5) * 260, g: 900, max: 0.6 });
+      }
+      this.blobPop = Math.max(0, this.blobPop - dt);
+      const sc = this.blobPop > 0 ? 0 : 0.5 + 0.5 * this.blobHp;
+      const wob = Math.sin(this.t * 30) * 0.06;
+      if (sc > 0) draw(g, "m_blob_hit", bx, by + 20, 0.75 * sc + 0.15, true, 0, 1, 1 + wob, 1 - wob);
+      else draw(g, `fx_splash_${Math.min(5, Math.floor((0.4 - this.blobPop) * 15))}`, bx, by + 10, 1.4);
+      const S = 0.95;
+      draw(g, `pack_${this.tier >= 5 ? 2 : this.tier >= 3 ? 1 : 0}`, kx - 12 * S, ky - 30 * S, S);
+      draw(g, `kid_shoot_${Math.floor(this.t * 10) % 2}`, kx, ky + 6, S);
+      const gun = `gun_${this.tier}`;
+      const hx = kx + 6 * S, hy = ky - 22 * S;
+      const aim = -0.06;
+      draw(g, gun, hx, hy, S * (1 + 0.04 * this.tier), false, aim);
+      const [mx, my] = point(gun, "muzzle");
+      const kk = S * (1 + 0.04 * this.tier) / 2;
+      const x0 = hx + Math.cos(aim) * mx * kk - Math.sin(aim) * my * kk, y0 = hy + Math.sin(aim) * mx * kk + Math.cos(aim) * my * kk;
+      const x1 = bx - 10, y1 = by - 18;
+      const w = this.shownW * (1 + this.pulse * 0.6);
+      const path = () => {
+        g.beginPath();
+        g.moveTo(x0, y0);
+        g.quadraticCurveTo((x0 + x1) / 2, (y0 + y1) / 2 + 8 + Math.sin(this.t * 8) * 3, x1, y1);
+      };
+      g.lineCap = "round";
+      path();
+      g.strokeStyle = "rgba(140,220,255,0.35)";
+      g.lineWidth = w * 2;
+      g.stroke();
+      path();
+      g.strokeStyle = "rgba(28,98,170,0.9)";
+      g.lineWidth = w + 3;
+      g.stroke();
+      path();
+      g.strokeStyle = "#55c2f5";
+      g.lineWidth = w;
+      g.stroke();
+      path();
+      g.strokeStyle = "rgba(210,245,255,0.95)";
+      g.lineWidth = w * 0.5;
+      g.stroke();
+      path();
+      g.setLineDash([w * 1.4, w * 1.6]);
+      g.lineDashOffset = -this.t * 700;
+      g.strokeStyle = "rgba(255,255,255,0.9)";
+      g.lineWidth = Math.max(2, w * 0.22);
+      g.stroke();
+      g.setLineDash([]);
+      if (Math.random() < 0.6) this.fx.spawn("p_water_s", x1, y1, { z: 4, vz: 80 + Math.random() * 120, vx: -60 - Math.random() * 120, vy: (Math.random() - 0.5) * 60, g: 700, max: 0.4, scale: Math.min(2, w / 12) });
+      this.fx.draw(g, false);
+    }
+    destroy() {
+      this.alive = false;
+      cancelAnimationFrame(this.raf);
+    }
+  };
+
+  // src/ui/upgrades.ts
+  init_stats();
+  function fmt(n, d = 0) {
+    const v = Math.round(n * 10 ** d) / 10 ** d;
+    return Number.isInteger(v) ? String(v) : v.toFixed(d);
+  }
+  function statPair(id, a, b) {
+    switch (id) {
+      case "power":
+        return [num(a.dps), num(b.dps)];
+      case "range":
+        return [num(a.range), num(b.range)];
+      case "health":
+        return [num(a.maxHp), num(b.maxHp)];
+      case "pressure":
+        return [`${fmt(a.pressureMax, 2)}x`, `${fmt(b.pressureMax, 2)}x`];
+      case "splash":
+        return [num(a.dps * a.burstDmg), num(b.dps * b.burstDmg)];
+    }
+  }
+  var UpgradePanel = class {
+    constructor(opts) {
+      this.rows = /* @__PURE__ */ new Map();
+      this.onCoins = opts.onCoins;
+      this.onEvolve = opts.onEvolve;
+      this.preview = new StreamPreview();
+      this.track = h("div", { class: "gun-track" });
+      const list = h("div", { class: "up-list" });
+      for (const def of UPGRADES) {
+        const row = h("div", { class: "up-row", "data-id": def.id });
+        this.rows.set(def.id, row);
+        list.appendChild(row);
+      }
+      this.el = h("div", { class: "up-panel" + (opts.compact ? " compact" : "") }, h("div", { class: "preview-wrap" }, this.preview.canvas), this.track, list);
+      this.refresh();
+    }
+    refresh(celebrate = false) {
+      const st = computeStats(metaPower(), {}, 0);
+      this.preview.set(st.width, st.range, st.gunTier, celebrate);
+      const tier = gunTier();
+      const total = upgradeTotal(save().upgrades);
+      const next = GUN_TIERS[tier + 1];
+      this.track.replaceChildren(
+        h("div", { class: "gun-icons" }, ...GUN_TIERS.map((_, i) => h("div", { class: "gun-slot" + (i < tier ? " done" : i === tier ? " cur" : "") + (i === GUN_TIERS.length - 1 ? " final" : "") }, icon(`gun_${i}`, i === tier ? 46 : 34, i > tier ? "locked" : "")))),
+        h("div", { class: "gun-label" }, h("b", {}, t(`gun.${tier}`)), h("span", {}, next ? t("upgrade.gunNext", { n: next.at - total }) : t("upgrade.gunFinal")))
+      );
+      for (const def of UPGRADES) this.renderRow(def.id, st);
+    }
+    renderRow(id, st) {
+      const row = this.rows.get(id);
+      const info = upgradeInfo(id);
+      const open = featureUpgradeOpen(id);
+      row.classList.toggle("locked", !open);
+      if (!open) {
+        row.replaceChildren(icon("ic_lock", 44, "up-ic"), h("div", { class: "up-txt" }, h("div", { class: "up-name" }, t(`upgrade.${id}.name`)), h("div", { class: "up-desc" }, t("stage.locked") + ` \xB7 ${t("stage.short", { n: upgradeUnlockStage(id) })}`)));
+        return;
+      }
+      const meta = metaPower();
+      const after = { ...meta, upgrades: { ...meta.upgrades, [id]: info.lv + 1 } };
+      const st2 = computeStats(after, {}, 0);
+      const [a, b] = statPair(id, st, st2);
+      const afford = save().coins >= info.cost;
+      const btn = h(
+        "button",
+        { class: "btn up-buy" + (info.maxed ? " maxed" : afford ? " ok" : " off"), "aria-label": t(`upgrade.${id}.name`), onclick: () => this.buy(id, btn) },
+        info.maxed ? h("span", {}, t("common.max")) : h("span", { class: "up-cost" }, icon("p_coin_0", 24), h("span", {}, num(info.cost)))
+      );
+      row.replaceChildren(
+        icon(`ic_up_${id}`, 52, "up-ic"),
+        h(
+          "div",
+          { class: "up-txt" },
+          h("div", { class: "up-name" }, t(`upgrade.${id}.name`), h("span", { class: "up-lv" }, t("upgrade.lv", { n: info.lv }))),
+          h("div", { class: "up-stat" }, info.maxed ? t("upgrade.maxed") : t(`upgrade.stat.${id}`, { a, b })),
+          h("div", { class: "up-desc" }, t(`upgrade.${id}.desc`))
+        ),
+        btn
+      );
+    }
+    buy(id, btn) {
+      const info = upgradeInfo(id);
+      if (info.maxed) return;
+      if (save().coins < info.cost) {
+        audio.play("ui_locked", { vol: 0.7 });
+        buzz("light");
+        btn.classList.remove("shake");
+        void btn.offsetWidth;
+        btn.classList.add("shake");
+        toast(t("upgrade.notEnough"), "p_coin_0");
+        return;
+      }
+      const r = buyUpgrade(id);
+      if (!r.ok) return;
+      audio.play("upgrade_buy", { vol: 0.9 });
+      buzz("medium");
+      const row = this.rows.get(id);
+      row.classList.remove("flash");
+      void row.offsetWidth;
+      row.classList.add("flash");
+      this.refresh(true);
+      this.onCoins();
+      if (r.tierAfter > r.tierBefore) this.onEvolve(r.tierAfter);
+    }
+    destroy() {
+      this.preview.destroy();
+    }
+  };
+
+  // src/ui/home.ts
+  function stageName(stage) {
+    return t("stage.label", { r: t(`region.${regionOf(stage)}`), n: (stage - 1) % 10 + 1 });
+  }
+  function speciesWhere(sp, levels) {
+    if (sp === "penguin") return t("shelter.whereStreak", { n: 2 });
+    if (sp === "panda") return t("shelter.whereStreak", { n: 5 });
+    const lv = levels.find((l) => l.rooms.some((r) => r.animals.some((a) => a.s === sp)));
+    return lv ? t("shelter.where", { place: stageName(lv.stage) }) : "";
+  }
+  var HomeScreen = class {
+    constructor(api, ui, tab = "map") {
+      this.tab = "map";
+      this.map = new MapView();
+      this.shelter = new ShelterView();
+      this.navBtns = {};
+      this.pages = {};
+      this.upPanel = null;
+      this.drag = { on: false, id: -1, y0: 0, y: 0, x0: 0, moved: 0, t: 0, vy: 0, lastY: 0, lastT: 0 };
+      this.badgeTimer = 0;
+      // ---------------------------------------------------------------- input on the canvas
+      this.onDown = (e) => {
+        if (isOpen()) return;
+        const d = this.drag;
+        d.on = true;
+        d.id = e.pointerId;
+        d.y0 = d.y = d.lastY = e.clientY;
+        d.x0 = e.clientX;
+        d.moved = 0;
+        d.t = d.lastT = performance.now();
+        d.vy = 0;
+        this.map.vel = 0;
+      };
+      this.onMove = (e) => {
+        const d = this.drag;
+        if (!d.on || e.pointerId !== d.id) return;
+        const dy = e.clientY - d.y;
+        d.y = e.clientY;
+        d.moved += Math.abs(dy);
+        const now = performance.now();
+        const dt = Math.max(1, now - d.lastT);
+        d.vy = d.vy * 0.6 + (e.clientY - d.lastY) / dt * 1e3 * 0.4;
+        d.lastY = e.clientY;
+        d.lastT = now;
+        if (this.tab === "map") this.map.drag(dy);
+      };
+      this.onUp = (e) => {
+        const d = this.drag;
+        if (!d.on || e.pointerId !== d.id) return;
+        d.on = false;
+        if (d.moved < 10 && Math.abs(e.clientX - d.x0) < 10) this.tap(e.clientX, e.clientY);
+        else if (this.tab === "map" && performance.now() - d.lastT < 80) this.map.fling(d.vy);
+      };
+      this.onWheel = (e) => {
+        if (this.tab === "map" && !isOpen()) this.map.drag(-e.deltaY);
+      };
+      this.api = api;
+      this.map.regionLabel = (k) => t(`region.${k}`);
+      this.map.cleared = (s) => isCleared(s);
+      this.root = h("div", { class: "home" });
+      ui.appendChild(this.root);
+      this.build();
+      this.layout();
+      this.refreshMapState();
+      this.map.focus(this.map.current);
+      this.setTab(tab, true);
+      screen.canvas.addEventListener("pointerdown", this.onDown);
+      window.addEventListener("pointermove", this.onMove);
+      window.addEventListener("pointerup", this.onUp);
+      screen.canvas.addEventListener("wheel", this.onWheel, { passive: true });
+    }
+    // ---------------------------------------------------------------- DOM
+    build() {
+      this.coinEl = h("span", { class: "num" }, num(save().coins));
+      this.shelterHead = h("div", { class: "sh-head" });
+      const settings = h("button", { class: "btn-icon", "aria-label": t("settings.title"), onclick: once(() => this.api.openSettings()) }, icon("ic_gear", 32));
+      const top = h("div", { class: "topbar" }, h("div", { class: "pill coin-pill" }, icon("p_coin_0", 28), this.coinEl), h("div", { class: "grow" }, this.shelterHead), settings);
+      this.side = h("div", { class: "side" });
+      this.cta = h("button", { class: "btn btn-primary big cta", onclick: once(() => this.api.play(this.map.current)) });
+      this.pages.map = h("div", { class: "page page-map" }, this.side, this.cta);
+      this.pages.upgrade = h("div", { class: "page page-up" });
+      this.giftBtn = h("button", { class: "btn btn-green gift-btn", onclick: once(() => this.collect()) });
+      const shBtns = h(
+        "div",
+        { class: "sh-btns" },
+        h("button", { class: "btn btn-plain sq", onclick: once(() => this.openAlbum()) }, icon("ic_paw", 32), h("span", {}, t("shelter.list"))),
+        h("button", { class: "btn btn-plain sq decor-btn", onclick: once(() => this.openDecor()) }, icon("dc_ball", 32), h("span", {}, t("shelter.decor")))
+      );
+      const shCta = h("button", { class: "btn btn-primary big cta", onclick: once(() => this.api.play(nextStage())) });
+      this.pages.shelter = h("div", { class: "page page-shelter" }, h("div", { class: "sh-row" }, this.giftBtn, shBtns), shCta);
+      this.pages.shelter.cta = shCta;
+      const nav = h("div", { class: "nav" });
+      for (const [k, ic, label] of [["upgrade", "ic_upgrade", "nav.upgrade"], ["map", "ic_map", "nav.map"], ["shelter", "ic_shelter", "nav.shelter"]]) {
+        const b = h("button", { class: "nav-btn", "data-tab": k, onclick: () => this.setTab(k) }, icon(ic, 40), h("span", {}, t(label)));
+        this.navBtns[k] = b;
+        nav.appendChild(b);
+      }
+      this.root.append(this.pages.map, this.pages.upgrade, this.pages.shelter, top, nav);
+    }
+    refreshCoins() {
+      this.coinEl.textContent = num(save().coins);
+      this.coinEl.parentElement?.classList.remove("pop");
+      void this.coinEl.offsetWidth;
+      this.coinEl.parentElement?.classList.add("pop");
+      this.refreshBadges();
+    }
+    refreshMapState() {
+      this.map.current = nextStage();
+      const known = new Set(SPECIES.filter((s) => (save().rescued[s.id] || 0) > 0).map((s) => s.id));
+      this.map.newFriendAt = new Set(this.api.levels.filter((l) => l.rooms.some((r) => r.animals.some((a) => !known.has(a.s)))).map((l) => l.stage));
+      const st = this.map.current;
+      this.cta.replaceChildren(icon("ic_play", 32), h("span", { class: "cta-txt" }, h("span", { class: "cta-small" }, t("stage.play")), h("span", {}, stageName(st))));
+      const sc = this.pages.shelter.cta;
+      sc.replaceChildren(icon("ic_play", 32), h("span", { class: "cta-txt" }, h("span", { class: "cta-small" }, t("stage.play")), h("span", {}, stageName(st))));
+      this.buildSide();
+      this.refreshBadges();
+    }
+    buildSide() {
+      const s = save();
+      const items = [];
+      const mk = (ic, label, badge, fn) => h("button", { class: "side-btn", onclick: once(fn) }, icon(ic, 40), h("span", {}, label), badge ? h("span", { class: "badge" }, "!") : null);
+      items.push(mk("ic_streak", t("streak.title"), !s.streak.claimedToday, () => this.api.openStreak()));
+      if (featureOpen("missions")) items.push(mk("ic_missions", t("missions.title"), missionsClaimable() > 0, () => this.api.openMissions()));
+      if (featureOpen("daily")) items.push(mk("ic_daily", t("daily.title"), !s.daily.cleared, () => this.api.openDaily()));
+      this.side.replaceChildren(...items);
+    }
+    refreshBadges() {
+      const coins = save().coins;
+      const canBuy = UPGRADES.some((u) => {
+        const i = upgradeInfo(u.id);
+        return featureUpgradeOpen(u.id) && !i.maxed && i.cost <= coins;
+      });
+      setBadge(this.navBtns.upgrade, canBuy && featureOpen("upgrades"));
+      setBadge(this.navBtns.shelter, featureOpen("shelter") && giftsPending() >= 10);
+      this.navBtns.upgrade.classList.toggle("hidden", !featureOpen("upgrades"));
+      this.navBtns.shelter.classList.toggle("hidden", !featureOpen("shelter"));
+    }
+    setTab(tab, initial = false) {
+      if (tab === this.tab && !initial) return;
+      if (!initial) audio.play("ui_tap", { vol: 0.6 });
+      this.tab = tab;
+      for (const k of Object.keys(this.pages)) {
+        this.pages[k].classList.toggle("on", k === tab);
+        this.navBtns[k].classList.toggle("on", k === tab);
+      }
+      this.shelterHead.classList.toggle("on", tab === "shelter");
+      if (tab === "upgrade") {
+        if (!this.upPanel) {
+          this.upPanel = new UpgradePanel({ onCoins: () => this.refreshCoins(), onEvolve: (tier) => this.api.evolve(tier) });
+          const cta = h("button", { class: "btn btn-primary big cta-inline", onclick: once(() => this.api.play(nextStage())) }, icon("ic_play", 32), h("span", {}, t("stage.play")));
+          const bonusBox = h("div", { class: "bonus-box" });
+          this.pages.upgrade.replaceChildren(h("div", { class: "page-title" }, icon("ic_upgrade", 40), h("span", {}, t("upgrade.title"))), h("div", { class: "page-scroll" }, this.upPanel.el, bonusBox, h("div", { class: "dream" }, icon("gun_6", 64), h("span", {}, t("upgrade.dream"))), cta));
+          this.pages.upgrade.bonus = bonusBox;
+        } else this.upPanel.refresh();
+        this.renderBonuses(this.pages.upgrade.bonus);
+      }
+      if (tab === "shelter") {
+        this.syncShelter();
+        track("shelter_open", { animals: this.shelter.pets.length });
+        if (!save().flags.unlock_shelter && featureOpen("shelter")) {
+          save().flags.unlock_shelter = true;
+        }
+      }
+      if (tab === "map") {
+        this.refreshMapState();
+      }
+      this.layout();
+    }
+    renderBonuses(box) {
+      const meta = { upgrades: save().upgrades, bonds: bonds(), assist: false };
+      const rows = SPECIES.filter((s) => meta.bonds[s.id]).map((s) => h("div", { class: "bonus-row" }, icon(`p_${s.id}`, 36), h("span", {}, t(`bonus.${s.bonus}`, { v: pct(s.per * (meta.bonds[s.id] || 0)) }))));
+      box.replaceChildren(h("div", { class: "bonus-title" }, icon("ic_paw", 28), t("shelter.totalBonus")), ...rows.length ? rows : [h("div", { class: "bonus-empty" }, t("shelter.giftNone"))]);
+      void bondBonus;
+    }
+    syncShelter(arrivals = []) {
+      const s = save();
+      this.shelter.setData(s.rescued, (sp) => bondProgress(sp).lv, s.decor);
+      this.shelter.layout(screen.w, screen.h, screen.safe.top + 136, screen.safe.bottom + 172);
+      for (const a of arrivals) this.shelter.arrive(a);
+      const n = giftsPending();
+      this.shelter.setGifts(n);
+      const total = SPECIES.length;
+      const have = SPECIES.filter((x) => (s.rescued[x.id] || 0) > 0).length;
+      this.shelterHead.replaceChildren(h("div", { class: "sh-title" }, icon("ic_shelter", 32), h("span", {}, t("shelter.title"))), h("div", { class: "sh-count" }, t("shelter.count", { a: have, b: total })));
+      this.giftBtn.replaceChildren(icon("ic_gift", 34), h("span", { class: "gift-txt" }, h("span", {}, n > 0 ? t("shelter.giftReady", { n: num(n) }) : t("shelter.giftNone")), h("span", { class: "gift-rate" }, t("shelter.giftRate", { n: num(giftRate()), h: GIFTS.capHours }))));
+      this.giftBtn.classList.toggle("off", n <= 0);
+      this.pages.shelter.querySelector(".decor-btn")?.classList.toggle("hidden", !featureOpen("decor"));
+    }
+    collect() {
+      const n = collectGifts();
+      if (n <= 0) {
+        audio.play("ui_locked", { vol: 0.6 });
+        toast(t("shelter.giftNone"), "ic_gift");
+        return;
+      }
+      audio.play("gift_collect", { vol: 1 });
+      audio.play("coin_burst", { vol: 0.8 });
+      buzz("success");
+      for (const p of this.shelter.pets) if (p.gift) {
+        this.shelter.poke(p);
+        for (let i = 0; i < 4; i++) this.shelter.fx.spawn(["p_coin_0", "p_coin_1", "p_coin_2", "p_coin_3"], p.x, p.y - 50, { fps: 12, z: 10, vz: 260 + Math.random() * 120, vx: (Math.random() - 0.5) * 140, g: 700, max: 0.9 });
+      }
+      toast(`+${num(n)}`, "p_coin_0");
+      this.refreshCoins();
+      this.syncShelter();
+    }
+    // ---------------------------------------------------------------- popups owned by home
+    openStage(stage) {
+      if (isOpen("stage")) return;
+      const lv = this.api.levels.find((l) => l.stage === stage);
+      if (!lv) return;
+      const unlocked = stageUnlocked(stage);
+      const species = [...new Set(lv.rooms.flatMap((r) => r.animals.map((a) => a.s)))];
+      const animals = h("div", { class: "st-animals" }, ...species.map((sp) => {
+        const known = (save().rescued[sp] || 0) > 0;
+        return h("div", { class: "st-animal" }, icon(known ? `p_${sp}` : `sil_${sp}`, 64), h("span", {}, known ? t(`species.${sp}`) : "?"), !known ? h("span", { class: "tag-new" }, t("common.new")) : null);
+      }));
+      const c = save().cleared[`s${stage}`];
+      const stars = h("div", { class: "st-stars" }, ...[0, 1, 2].map((i) => icon(c && c.stars > i ? "ic_star" : "ic_star_empty", 34)));
+      const body = h(
+        "div",
+        { class: "stage-info" },
+        h("div", { class: "st-sub" }, t("stage.animals")),
+        animals,
+        lv.intro && lv.intro !== "blob" ? h("div", { class: "st-goo" }, icon(lv.intro === "boss" ? `m_boss_${lv.region}_normal` : lv.intro === "flyer" ? "m_flyer_normal_0" : `m_${lv.intro}_normal`, 52), h("div", {}, h("div", { class: "st-goo-t" }, lv.intro === "boss" ? t("stage.boss") : t("stage.newGoo")), h("div", { class: "st-goo-n" }, t(`monster.${lv.intro}`)))) : null,
+        c ? h("div", { class: "st-best" }, stars, h("span", {}, `${t("stage.cleared")} \xB7 ${t("stage.best")} ${Math.floor(c.best / 60)}:${String(c.best % 60).padStart(2, "0")}`)) : null,
+        assistOffered(stage) ? h("div", { class: "st-assist" }, icon("ic_heart", 30), h("span", {}, t("stage.helpOffer"))) : null,
+        unlocked ? h("button", { class: "btn btn-primary big", onclick: once(() => {
+          closeModal("stage", true);
+          this.api.play(stage);
+        }) }, icon("ic_play", 32), t("stage.play")) : h("div", { class: "st-locked" }, icon("ic_lock", 30), t("stage.locked"))
+      );
+      openModal(body, { id: "stage", title: stageName(stage) });
+    }
+    openAlbum() {
+      const s = save();
+      const grid = h("div", { class: "album" }, ...SPECIES.map((sp) => {
+        const known = (s.rescued[sp.id] || 0) > 0;
+        return h("button", { class: "album-cell" + (known ? "" : " unknown"), onclick: () => this.openSpecies(sp.id) }, icon(known ? `p_${sp.id}` : `sil_${sp.id}`, 72), h("span", {}, known ? t(`species.${sp.id}`) : "?"));
+      }));
+      openModal(grid, { id: "album", title: t("shelter.list"), titleIcon: "ic_paw" });
+    }
+    openSpecies(sp) {
+      if (isOpen("species")) return;
+      const def = SPECIES.find((x) => x.id === sp);
+      const bp = bondProgress(sp);
+      const known = bp.count > 0;
+      const body = h(
+        "div",
+        { class: "species" },
+        icon(known ? `p_${sp}` : `sil_${sp}`, 120, "species-art"),
+        h("div", { class: "species-name" }, known ? t(`species.${sp}`) : "?"),
+        known ? h("div", { class: "species-bond" }, ...[1, 2, 3, 4, 5].map((i) => icon(i <= bp.lv ? "p_heart" : "ic_star_empty", 26, i <= bp.lv ? "" : "dim")), h("span", {}, t("shelter.bond", { n: bp.lv }))) : null,
+        h("div", { class: "species-bonus" }, h("b", {}, t("shelter.bonusTitle")), h("span", {}, t(`bonus.${def.bonus}`, { v: pct(def.per * Math.max(1, bp.lv)) }))),
+        known ? h("div", { class: "species-note" }, bp.maxed ? t("shelter.bondMax") : t("shelter.bondNext", { n: bp.toNext })) : h("div", { class: "species-note" }, speciesWhere(sp, this.api.levels)),
+        known ? h("div", { class: "species-count" }, t("shelter.rescued", { n: bp.count })) : null
+      );
+      openModal(body, { id: "species", title: known ? t(`species.${sp}`) : t("shelter.empty") });
+    }
+    openDecor() {
+      const s = save();
+      const list = h("div", { class: "decor-list" });
+      const render = () => list.replaceChildren(...DECOR.map((d) => {
+        const owned = s.decor.includes(d.id);
+        const btn = owned ? h("div", { class: "decor-owned" }, icon("ic_check", 28), t("shelter.decorOwned")) : h("button", { class: "btn up-buy " + (s.coins >= d.cost ? "ok" : "off"), onclick: () => {
+          if (!buyDecor(d.id)) {
+            audio.play("ui_locked", { vol: 0.7 });
+            toast(t("upgrade.notEnough"), "p_coin_0");
+            return;
+          }
+          audio.play("upgrade_buy", { vol: 0.9 });
+          buzz("medium");
+          this.refreshCoins();
+          this.syncShelter();
+          render();
+        } }, h("span", { class: "up-cost" }, icon("p_coin_0", 24), h("span", {}, num(d.cost))));
+        return h("div", { class: "decor-row" + (owned ? " owned" : "") }, icon(`dc_${d.id}`, 64), h("div", { class: "up-txt" }, h("div", { class: "up-name" }, t(`decor.${d.id}`)), h("div", { class: "up-desc" }, t("shelter.decorDesc"))), btn);
+      }));
+      render();
+      openModal(list, { id: "decor", title: t("shelter.decor"), titleIcon: "dc_ball" });
+    }
+    tap(x, y) {
+      if (this.tab === "map") {
+        const n = this.map.hitNode(x, y);
+        if (n) {
+          audio.play("ui_tap", { vol: 0.7 });
+          this.openStage(n.stage);
+        }
+      } else if (this.tab === "shelter") {
+        const p = this.shelter.hitPet(x, y);
+        if (p) {
+          if (p.gift) {
+            this.collect();
+            return;
+          }
+          audio.play(`chirp_${1 + p.id % 3}`, { vol: 0.8 });
+          this.shelter.poke(p);
+          buzz("tick");
+          setTimeout(() => this.openSpecies(p.sp), 260);
+          return;
+        }
+        const b = this.shelter.hitBasket(x, y);
+        if (b) {
+          audio.play("ui_tap", { vol: 0.7 });
+          this.openSpecies(b);
+        }
+      }
+    }
+    // ---------------------------------------------------------------- frame
+    topInset() {
+      return screen.safe.top + 70;
+    }
+    bottomInset() {
+      return screen.safe.bottom + 92;
+    }
+    layout() {
+      this.map.layout(screen.w, screen.h, screen.safe.top + 64, screen.safe.bottom + 176);
+      this.shelter.layout(screen.w, screen.h, screen.safe.top + 136, screen.safe.bottom + 172);
+    }
+    frame(dt) {
+      this.badgeTimer -= dt;
+      if (this.badgeTimer <= 0) {
+        this.badgeTimer = 5;
+        if (this.tab === "shelter") {
+          this.shelter.setGifts(giftsPending());
+        }
+        this.refreshBadges();
+      }
+      if (this.tab === "map") {
+        this.map.update(dt);
+        this.map.render(screen.ctx, screen.dpr);
+      } else if (this.tab === "shelter") {
+        this.shelter.update(dt);
+        this.shelter.render(screen.ctx, screen.dpr);
+      } else {
+        const c = screen.ctx;
+        c.setTransform(1, 0, 0, 1, 0, 0);
+        c.fillStyle = "#9bd86a";
+        c.fillRect(0, 0, screen.canvas.width, screen.canvas.height);
+      }
+    }
+    washMap(stage) {
+      this.map.focus(stage);
+      this.map.washing = { stage, t: 0 };
+      setTimeout(() => audio.play("room_clear", { vol: 0.7 }), 200);
+    }
+    destroy() {
+      screen.canvas.removeEventListener("pointerdown", this.onDown);
+      window.removeEventListener("pointermove", this.onMove);
+      window.removeEventListener("pointerup", this.onUp);
+      screen.canvas.removeEventListener("wheel", this.onWheel);
+      this.upPanel?.destroy();
+      this.root.remove();
+    }
+    highest() {
+      return highestCleared();
+    }
+  };
+  function setBadge(el, on) {
+    let b = el.querySelector(".badge");
+    if (on && !b) {
+      b = h("span", { class: "badge" }, "!");
+      el.appendChild(b);
+    }
+    if (!on && b) b.remove();
+  }
+
+  // src/ui/popups.ts
+  init_balance();
+  init_quality();
+  init_progress();
+  init_save();
+  init_analytics();
+  function openSettings(onChange) {
+    if (isOpen("settings")) return;
+    const s = save().settings;
+    const body = h("div", { class: "settings" });
+    const render = () => {
+      const slider = (key, ic) => {
+        const input = h("input", { type: "range", min: 0, max: 100, step: 5, value: Math.round(s[key] * 100), class: "slider", "aria-label": t(`settings.${key}`) });
+        const val = h("span", { class: "set-val" }, `${Math.round(s[key] * 100)}`);
+        input.addEventListener("input", () => {
+          s[key] = Number(input.value) / 100;
+          val.textContent = input.value;
+          audio.setVolumes(s.music, s.sfx);
+          markDirty();
+        });
+        input.addEventListener("change", () => {
+          audio.play("ui_tap");
+          track("settings_change", { key, value: s[key] });
+        });
+        return h("div", { class: "set-row" }, icon(ic, 40), h("span", { class: "set-label" }, t(`settings.${key}`)), input, val);
+      };
+      const toggle = (label, ic, on, fn, note) => h(
+        "div",
+        { class: "set-row" + (note ? " with-note" : "") },
+        icon(ic, 40),
+        h("span", { class: "set-label" }, label, note ? h("small", {}, note) : null),
+        h("button", { class: "toggle" + (on ? " on" : ""), role: "switch", "aria-checked": on ? "true" : "false", "aria-label": label, onclick: () => {
+          fn(!on);
+          audio.play("ui_tap");
+          render();
+        } }, h("span", { class: "knob" }), h("span", { class: "tg-txt" }, on ? t("settings.on") : t("settings.off")))
+      );
+      const seg = (label, ic, cur, opts, fn, note) => h(
+        "div",
+        { class: "set-block" },
+        h("div", { class: "set-row bare" }, icon(ic, 40), h("span", { class: "set-label" }, label, note ? h("small", {}, note) : null)),
+        h("div", { class: "seg" }, ...opts.map(([v, l]) => h("button", { class: "seg-btn" + (v === cur ? " on" : ""), onclick: () => {
+          if (v !== cur) {
+            fn(v);
+            audio.play("ui_tap");
+            render();
+          }
+        } }, l)))
+      );
+      body.replaceChildren(
+        slider("music", "ic_music"),
+        slider("sfx", "ic_sfx"),
+        toggle(t("settings.vibration"), "ic_vibe", s.vibration, (v) => {
+          s.vibration = v;
+          setHaptics(v);
+          if (v) buzz("medium");
+          markDirty();
+          track("settings_change", { key: "vibration", value: v });
+        }),
+        toggle(t("settings.contrast"), "ic_eye", s.contrast, (v) => {
+          s.contrast = v;
+          markDirty();
+          onChange();
+          track("settings_change", { key: "contrast", value: v });
+        }, t("settings.contrastNote")),
+        seg(t("settings.language"), "ic_lang", s.lang, [["auto", t("settings.lang.auto")], ["ko", t("settings.lang.ko")], ["en", t("settings.lang.en")]], (v) => {
+          s.lang = v;
+          setLang(v === "auto" ? deviceLang() : v);
+          markDirty();
+          track("settings_change", { key: "lang", value: v });
+          onChange();
+          relabel();
+        }),
+        seg(t("settings.graphics"), "ic_gfx", s.quality === "auto" ? qualityLevel() : s.quality, [["low", t("settings.gfx.low")], ["medium", t("settings.gfx.medium")], ["high", t("settings.gfx.high")]], (v) => {
+          s.quality = v;
+          setQuality(v === "auto" ? defaultQuality() : v);
+          markDirty();
+          track("settings_change", { key: "quality", value: v });
+        }, t("settings.gfxNote")),
+        h(
+          "div",
+          { class: "set-links" },
+          h("button", { class: "btn btn-plain", onclick: once(() => openCredits()) }, icon("ic_info", 28), t("settings.credits")),
+          h("button", { class: "btn btn-warn", onclick: once(() => confirmReset()) }, icon("ic_reset", 28), t("settings.reset"))
+        ),
+        h("div", { class: "set-ver" }, t("settings.version", { v: "1.0.0" }))
+      );
+    };
+    const relabel = () => {
+      const el = document.querySelector(".modal-title");
+      if (el) el.textContent = t("settings.title");
+    };
+    render();
+    openModal(body, { id: "settings", title: t("settings.title"), titleIcon: "ic_gear", onClose: () => {
+      flush();
+      onChange();
+    } });
+  }
+  function openCredits() {
+    openModal(h("div", { class: "credits" }, ...t("settings.creditsText").split("\n").map((l) => h("p", {}, l))), { id: "credits", title: t("settings.credits") });
+  }
+  function confirmReset() {
+    const body = h(
+      "div",
+      { class: "confirm" },
+      h("p", {}, t("settings.resetConfirm")),
+      h(
+        "div",
+        { class: "confirm-btns" },
+        h("button", { class: "btn btn-plain", onclick: once(() => closeModal("reset")) }, t("common.cancel")),
+        h("button", { class: "btn btn-warn", onclick: once(() => {
+          resetSave();
+          location.reload();
+        }) }, t("settings.resetYes"))
+      )
+    );
+    openModal(body, { id: "reset", title: t("settings.reset") });
+  }
+  function openStreak(onDone) {
+    if (isOpen("streak")) return;
+    const s = save();
+    const day = Math.max(1, s.streak.day);
+    const week = Math.floor((day - 1) / 7);
+    const body = h("div", { class: "streak" });
+    const render = () => {
+      const cells = Array.from({ length: 7 }, (_, i) => {
+        const d = week * 7 + i + 1;
+        const r = streakReward(d);
+        const got = d < day || d === day && s.streak.claimedToday;
+        const today2 = d === day;
+        return h(
+          "div",
+          { class: "stamp" + (got ? " got" : "") + (today2 ? " today" : "") },
+          h("div", { class: "stamp-day" }, t("streak.day", { n: d })),
+          r.species ? icon(got ? `p_${r.species}` : `sil_${r.species}`, 50) : icon("p_coin_0", 40),
+          h("div", { class: "stamp-val" }, r.species ? t(`species.${r.species}`) : num(r.coins)),
+          got ? icon("ic_check", 30, "stamp-check") : null
+        );
+      });
+      const tomorrow = streakReward(day + 1);
+      const giftName = tomorrow.species ? t("streak.visitor", { name: t(`species.${tomorrow.species}`) }) : t("streak.coins", { n: num(tomorrow.coins) });
+      body.replaceChildren(
+        h("div", { class: "stamps" }, ...cells),
+        s.streak.claimedToday ? h("div", { class: "streak-next" }, icon(tomorrow.species ? `sil_${tomorrow.species}` : "ic_gift", 44), h("span", {}, t("streak.tomorrowHint", { gift: giftName }))) : h("button", { class: "btn btn-primary big", onclick: once(() => {
+          const r = claimStreak();
+          if (!r) return;
+          audio.play(r.species ? "rescue" : "coin_burst", { vol: 1 });
+          buzz("success");
+          toast(r.species ? t("streak.visitor", { name: t(`species.${r.species}`) }) : `+${num(r.coins)}`, r.species ? `p_${r.species}` : "p_coin_0", 2400);
+          render();
+          onDone();
+        }) }, icon("ic_gift", 32), t("common.claim"))
+      );
+    };
+    render();
+    openModal(body, { id: "streak", title: t("streak.title"), titleIcon: "ic_streak" });
+    void STREAK_REWARDS;
+  }
+  function openMissions(onDone) {
+    if (isOpen("missions")) return;
+    const s = save();
+    const body = h("div", { class: "missions" });
+    const render = () => {
+      const rows = s.missions.ids.map((id, i) => {
+        const def = missionDef(id);
+        const p = s.missions.progress[i];
+        const done = p >= def.target;
+        const claimed = s.missions.claimed[i];
+        return h(
+          "div",
+          { class: "mission" + (claimed ? " claimed" : "") },
+          h(
+            "div",
+            { class: "mission-txt" },
+            h("div", { class: "mission-name" }, t(`mission.${id}`, { n: def.target })),
+            h("div", { class: "bar thin mbar" }, h("div", { class: "bar-fill xp", style: `width:${Math.round(p / def.target * 100)}%` })),
+            h("div", { class: "mission-prog" }, `${num(p)} / ${num(def.target)}`)
+          ),
+          claimed ? icon("ic_check", 40) : h("button", { class: "btn up-buy " + (done ? "ok" : "off"), onclick: () => {
+            if (!done) {
+              audio.play("ui_locked", { vol: 0.6 });
+              return;
+            }
+            const c = claimMission(i);
+            if (c) {
+              audio.play("coin_burst", { vol: 0.9 });
+              buzz("success");
+              toast(`+${num(c)}`, "p_coin_0");
+              render();
+              onDone();
+            }
+          } }, h("span", { class: "up-cost" }, icon("p_coin_0", 24), h("span", {}, num(def.coins))))
+        );
+      });
+      const allDone = s.missions.claimed.length > 0 && s.missions.claimed.every(Boolean);
+      const ms = dailyRemainingMs();
+      const hh = Math.floor(ms / 36e5), mm = Math.floor(ms % 36e5 / 6e4);
+      body.replaceChildren(
+        ...rows,
+        h(
+          "div",
+          { class: "mission all" + (s.missions.allClaimed ? " claimed" : "") },
+          icon("ic_gift", 48),
+          h("div", { class: "mission-txt" }, h("div", { class: "mission-name" }, t("missions.all"))),
+          s.missions.allClaimed ? icon("ic_check", 40) : h("button", { class: "btn up-buy " + (allDone ? "ok" : "off"), onclick: () => {
+            const c = claimAllMissionsBonus();
+            if (c) {
+              audio.play("coin_burst");
+              buzz("success");
+              toast(`+${num(c)}`, "p_coin_0");
+              render();
+              onDone();
+            } else audio.play("ui_locked", { vol: 0.6 });
+          } }, h("span", { class: "up-cost" }, icon("p_coin_0", 24), h("span", {}, num(MISSION_ALL_BONUS))))
+        ),
+        h("div", { class: "mission-reset" }, t("missions.resetIn", { h: hh, m: mm }))
+      );
+    };
+    render();
+    openModal(body, { id: "missions", title: t("missions.title"), titleIcon: "ic_missions" });
+  }
+  function openDaily(mod, onPlay) {
+    if (isOpen("daily")) return;
+    const s = save();
+    const body = h(
+      "div",
+      { class: "daily" },
+      h(
+        "div",
+        { class: "daily-card" },
+        icon(mod === "big" ? "m_chunky_normal" : mod === "fast" ? "m_dasher_normal" : mod === "swarm" ? "m_blob_normal" : "goo_drop_0", 80),
+        h("div", {}, h("div", { class: "daily-mod" }, t(`daily.mod.${mod}`)), h("div", { class: "daily-desc" }, t(`daily.mod.${mod}.desc`)))
+      ),
+      h("div", { class: "daily-reward" }, icon("p_coin_0", 32), h("span", {}, s.daily.cleared ? t("daily.done", { n: DAILY.replayCoins }) : t("daily.reward", { n: DAILY.firstClearCoins }))),
+      s.daily.streak > 0 ? h("div", { class: "daily-streak" }, icon("ic_streak", 30), t("daily.streak", { n: s.daily.streak })) : null,
+      h("button", { class: "btn btn-primary big", onclick: once(() => {
+        closeModal("daily", true);
+        onPlay();
+      }) }, icon("ic_play", 32), t("daily.play"))
+    );
+    openModal(body, { id: "daily", title: t("daily.title"), titleIcon: "ic_daily" });
+  }
+  var UNLOCK_ICON = { upgrades: "ic_upgrade", shelter: "ic_shelter", missions: "ic_missions", daily: "ic_daily", decor: "dc_cushion" };
+  function openUnlock(f, onClose) {
+    audio.play("unlock", { vol: 0.9 });
+    buzz("success");
+    const body = h(
+      "div",
+      { class: "unlock" },
+      icon(UNLOCK_ICON[f], 110, "unlock-ic"),
+      h("div", { class: "unlock-title" }, t(`unlock.${f}`)),
+      h("button", { class: "btn btn-primary big", onclick: once(() => closeModal(`unlock-${f}`)) }, t("common.ok"))
+    );
+    openModal(body, { id: `unlock-${f}`, cls: "modal-unlock", onClose });
+  }
+  function openEvolve(tier) {
+    audio.stinger("stinger_evolve");
+    buzz("heavy");
+    const prev = Math.max(0, tier - 1);
+    const body = h(
+      "div",
+      { class: "evolve" },
+      h("div", { class: "evolve-row" }, icon(`gun_${prev}`, 70, "evolve-old"), icon("ic_arrow", 44), icon(`gun_${tier}`, 120, "evolve-new")),
+      h("div", { class: "evolve-name" }, t(`gun.${tier}`)),
+      h("div", { class: "evolve-desc" }, t("gun.evolvedDesc")),
+      tier < GUN_TIERS.length - 1 ? h("div", { class: "evolve-next" }, icon("gun_6", 54, "locked"), h("span", {}, t("upgrade.dream"))) : null,
+      h("button", { class: "btn btn-primary big", onclick: once(() => closeModal("evolve")) }, t("common.ok"))
+    );
+    openModal(body, { id: "evolve", title: t("gun.evolved"), cls: "modal-evolve" });
+  }
+
+  // src/ui/result.ts
+  init_save();
+  var TIPS = { spitter: "result.tip.spitter", flyer: "result.tip.spitter", blob: "result.tip.contact", mini: "result.tip.contact", splitter: "result.tip.contact", dasher: "result.tip.dasher", jumper: "result.tip.jumper", chunky: "result.tip.chunky", nest: "result.tip.contact", boss: "result.tip.boss" };
+  var ResultScreen = class {
+    constructor(ui, sum, act) {
+      this.steps = [];
+      this.timers = [];
+      this.skipped = false;
+      this.panel = null;
+      const win = sum.result === "clear";
+      const title = win ? t("result.clear") : sum.result === "quit" ? t("result.quit") : t("result.fail");
+      this.coinEl = h("span", { class: "num" }, num(save().coins - sum.total));
+      const head = h(
+        "div",
+        { class: "res-head " + (win ? "win" : "lose") },
+        icon(win ? "kid_win_2" : "kid_sad_0", 96, "res-kid"),
+        h("div", { class: "res-titles" }, h("div", { class: "res-stage" }, act.daily ? t("daily.title") : stageName(sum.stage)), h("div", { class: "res-title" }, title)),
+        h("div", { class: "pill coin-pill res-coins" }, icon("p_coin_0", 26), this.coinEl)
+      );
+      const body = h("div", { class: "res-body" });
+      const rows = h("div", { class: "res-rows" });
+      body.appendChild(rows);
+      const foot = h(
+        "div",
+        { class: "res-foot" },
+        h("button", { class: "btn btn-plain res-sec", onclick: once(() => this.done(act.secondary.fn)) }, icon(act.secondary.icon, 30), h("span", {}, act.secondary.label)),
+        h("button", { class: "btn btn-primary big res-pri", onclick: once(() => this.done(act.primary.fn)) }, icon(act.primary.icon, 32), h("span", {}, act.primary.label))
+      );
+      const skip = h("div", { class: "res-skip" }, t("result.tapSkip"));
+      this.el = h("div", { class: "result" }, head, body, foot, skip);
+      ui.appendChild(this.el);
+      this.el.addEventListener("pointerdown", (e) => {
+        if (!e.target.closest("button")) this.skip();
+      });
+      requestAnimationFrame(() => this.el.classList.add("show"));
+      audio.stinger(win ? "stinger_clear" : "stinger_fail");
+      buzz(win ? "success" : "light");
+      const coinRow = h("div", { class: "res-row" }, icon("p_coin_0", 40), h("span", { class: "res-label" }, t("result.coins")), h("span", { class: "res-val" }, "0"));
+      const add = (el) => {
+        rows.appendChild(el);
+        requestAnimationFrame(() => el.classList.add("in"));
+      };
+      this.step(250, () => {
+        add(coinRow);
+        this.countUp(coinRow.querySelector(".res-val"), sum.coinsRun, 900);
+      });
+      if (sum.bonus) {
+        const label = sum.bonusKind === "first" ? t("result.firstClear") : sum.bonusKind === "daily" ? t("daily.title") : t("result.clearBonus");
+        this.step(1200, () => {
+          add(h("div", { class: "res-row bonus" }, icon("ic_star", 40), h("span", { class: "res-label" }, label), h("span", { class: "res-val" }, `+${num(sum.bonus)}`)));
+          audio.play("coin_burst", { vol: 0.8 });
+        });
+      }
+      this.step(sum.bonus ? 1900 : 1300, () => {
+        this.setCoins(save().coins);
+        const animals = h("div", { class: "res-animals" });
+        const row = h("div", { class: "res-row col" }, h("div", { class: "res-sub" }, icon("ic_paw", 30), h("span", {}, t("result.animals")), h("span", { class: "res-val" }, String(sum.rescued.length))), animals);
+        add(row);
+        sum.rescued.forEach((sp, i) => this.step(i * 260, () => {
+          const isNew = sum.newSpecies.includes(sp) && sum.rescued.indexOf(sp) === i;
+          const up = sum.bondUps.find((b) => b.species === sp);
+          animals.appendChild(h("div", { class: "res-animal in" }, icon(`p_${sp}`, 64), isNew ? h("span", { class: "tag-new" }, t("common.new")) : up ? h("span", { class: "tag-bond" }, t("result.bond", { n: up.to })) : null));
+          audio.play(`chirp_${1 + i % 3}`, { vol: 0.8 });
+        }, true));
+        if (!sum.rescued.length) animals.appendChild(h("div", { class: "res-none" }, "\u2014"));
+      });
+      const after = (sum.bonus ? 1900 : 1300) + sum.rescued.length * 260 + 300;
+      this.step(after, () => {
+        add(h("div", { class: "res-row small" }, icon("ic_goo", 34), h("span", { class: "res-label" }, t("result.washed")), h("span", { class: "res-val" }, num(sum.washed)), icon("ic_check", 26), h("span", { class: "res-val" }, `${sum.rooms}/${sum.totalRooms}`)));
+        if (sum.rescued.length || sum.result !== "clear") add(h("div", { class: "res-kept" }, t("result.kept")));
+        if (!win && sum.result === "fail") add(h("div", { class: "res-tip" }, icon("ic_info", 30), h("span", {}, t(TIPS[sum.deathSource ?? ""] ?? "result.tip.generic"))));
+      });
+      if (act.showUpgrades) this.step(after + 350, () => {
+        this.panel = new UpgradePanel({ compact: true, onCoins: () => this.setCoins(save().coins), onEvolve: act.onEvolve });
+        const box = h("div", { class: "res-up" }, h("div", { class: "res-up-title" }, icon("ic_upgrade", 30), h("span", {}, t("result.upgradeHint"))), this.panel.el);
+        body.appendChild(box);
+        requestAnimationFrame(() => box.classList.add("in"));
+        skip.remove();
+      });
+      else this.step(after + 200, () => skip.remove());
+    }
+    step(delay, fn, nested = false) {
+      if (this.skipped) {
+        fn();
+        return;
+      }
+      this.steps.push(fn);
+      const id = window.setTimeout(() => {
+        const i = this.steps.indexOf(fn);
+        if (i >= 0) {
+          this.steps.splice(i, 1);
+          fn();
+        }
+      }, delay);
+      this.timers.push(id);
+      void nested;
+    }
+    skip() {
+      if (this.skipped) return;
+      this.skipped = true;
+      for (const id of this.timers) clearTimeout(id);
+      while (this.steps.length) {
+        const f = this.steps.shift();
+        f();
+      }
+      this.el.querySelectorAll(".res-val[data-target]").forEach((el) => {
+        el.textContent = num(Number(el.dataset.target));
+      });
+      this.setCoins(save().coins);
+    }
+    countUp(el, to, ms) {
+      el.dataset.target = String(to);
+      const t0 = performance.now();
+      let lastTick = 0;
+      const tick = () => {
+        const k = Math.min(1, (performance.now() - t0) / ms);
+        const v = Math.round(to * (1 - Math.pow(1 - k, 3)));
+        el.textContent = num(this.skipped ? to : v);
+        if (performance.now() - lastTick > 60 && k < 1) {
+          audio.play("coin_tick", { vol: 0.35 });
+          lastTick = performance.now();
+        }
+        if (k < 1 && !this.skipped) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }
+    setCoins(n) {
+      this.coinEl.textContent = num(n);
+      this.coinEl.parentElement.classList.remove("pop");
+      void this.coinEl.offsetWidth;
+      this.coinEl.parentElement.classList.add("pop");
+    }
+    done(fn) {
+      this.skip();
+      fn();
+    }
+    destroy() {
+      for (const id of this.timers) clearTimeout(id);
+      this.panel?.destroy();
+      this.el.remove();
+    }
+  };
+
+  // src/ui/title.ts
+  var TitleScreen = class {
+    constructor(ui, onStart) {
+      this.map = new MapView();
+      this.time = 0;
+      this.map.cleared = () => false;
+      this.map.regionLabel = (k) => t(`region.${k}`);
+      this.map.current = 1;
+      const go = once(() => onStart(), 1e3);
+      this.el = h(
+        "div",
+        { class: "title" },
+        h(
+          "div",
+          { class: "title-logo" },
+          h("div", { class: "logo-main" }, t("app.title")),
+          t("app.title") !== "Splash Rescue" ? h("div", { class: "logo-sub" }, "Splash Rescue") : null
+        ),
+        h("div", { class: "title-art" }, icon("a_puppy_happy_1", 92, "ta-pup"), icon("kid_win_2", 150, "ta-kid"), icon("m_blob_hit", 84, "ta-blob")),
+        h("button", { class: "btn btn-primary big title-go", onclick: go }, icon("ic_play", 34), h("span", {}, t("title.play")))
+      );
+      ui.appendChild(this.el);
+    }
+    layout() {
+      this.map.layout(screen.w, screen.h, 0, 0);
+      this.map.focus(1);
+    }
+    frame(dt) {
+      this.time += dt;
+      this.map.update(dt);
+      this.map.scroll -= dt * 6;
+      this.map.clampScroll();
+      this.map.render(screen.ctx, screen.dpr);
+    }
+    destroy() {
+      this.el.remove();
+    }
+  };
+
+  // src/app.ts
   var LEVELS = levels_default.slice().sort((a, b) => a.stage - b.stage);
   var App = class {
     constructor(fresh) {
       this.scene = null;
+      this.home = null;
       this.ui = document.getElementById("ui");
       this.params = new URLSearchParams(location.search);
       this.last = 0;
       this.acc = 0;
       this.capture = this.params.has("capture");
+      this.result = null;
+      this.fpsSamples = [];
+      this.debug = {};
+      // ---------------------------------------------------------------- hub
+      this.homeScene = null;
       this.fresh = fresh;
       onResize(() => this.scene?.layout?.());
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden) this.scene?.autoPause?.();
+        if (document.hidden) {
+          this.scene?.autoPause?.();
+          flush();
+        } else {
+          refreshDay();
+        }
+      });
+      onLangChange(() => {
+        if (this.home && this.scene === this.homeScene) this.rebuildHome(this.home.tab);
       });
     }
     start() {
-      const stage = Number(this.params.get("stage") || 1);
-      this.playStage(stage);
+      refreshDay();
+      const stage = this.params.get("stage");
+      if (stage) this.playStage(Number(stage));
+      else if (this.params.has("home")) this.goHome(this.params.get("home") || "map");
+      else this.showTitle();
       if (this.capture) {
         window.__advance = (n, dt = 1 / 30) => {
-          for (let i = 0; i < n; i++) this.scene?.frame(dt);
+          for (let i = 0; i < n; i++) this.tick(dt);
         };
         return;
       }
@@ -5114,51 +7637,173 @@
         if (cap < 60 && this.acc < 1 / cap - 2e-3) return;
         const step = this.acc;
         this.acc = 0;
-        this.scene?.frame(step);
+        this.tick(step);
       };
       requestAnimationFrame(loop);
+      setInterval(() => this.reportPerf(), 6e4);
     }
-    metaPower() {
-      const s = save();
-      return { upgrades: { ...s.upgrades }, bonds: {}, assist: false };
+    tick(dt) {
+      if (dt > 0) {
+        this.fpsSamples.push(1 / dt);
+        if (this.fpsSamples.length > 600) this.fpsSamples.shift();
+      }
+      this.scene?.frame(dt);
+      this.debug.onFrame?.(dt);
     }
+    reportPerf() {
+      if (this.fpsSamples.length < 60) return;
+      const a = this.fpsSamples.slice().sort((x, y) => x - y);
+      track("perf_sample", { fpsMedian: Math.round(a[Math.floor(a.length / 2)]), fpsP10: Math.round(a[Math.floor(a.length * 0.1)]), quality: quality().dprCap });
+    }
+    setScene(s) {
+      this.scene?.destroy();
+      this.scene = s;
+      s?.layout?.();
+    }
+    // ---------------------------------------------------------------- title
+    showTitle() {
+      closeAll();
+      audio.playMusic("bgm_home");
+      const title = new TitleScreen(this.ui, () => {
+        if (save().stats.runs === 0) this.playStage(1);
+        else this.goHome("map");
+      });
+      this.home = null;
+      this.setScene(title);
+    }
+    goHome(tab = "map", opts = {}) {
+      closeAll();
+      this.result?.destroy();
+      this.result = null;
+      refreshDay();
+      audio.playMusic(tab === "shelter" ? "bgm_shelter" : "bgm_home");
+      const home = new HomeScreen({
+        levels: LEVELS,
+        play: (s) => this.playStage(s),
+        playDaily: () => this.playDaily(),
+        openSettings: () => openSettings(() => this.home?.refreshCoins()),
+        openStreak: () => openStreak(() => {
+          this.home?.refreshCoins();
+          this.home?.refreshMapState();
+          this.home?.syncShelter();
+        }),
+        openMissions: () => openMissions(() => {
+          this.home?.refreshCoins();
+          this.home?.refreshMapState();
+        }),
+        openDaily: () => openDaily(dailyChallenge(LEVELS).mod, () => this.playDaily()),
+        evolve: (tier) => openEvolve(tier)
+      }, this.ui, tab);
+      this.home = home;
+      const scene = { frame: (dt) => home.frame(dt), layout: () => home.layout(), destroy: () => home.destroy() };
+      this.homeScene = scene;
+      this.setScene(scene);
+      const origSetTab = home.setTab.bind(home);
+      home.setTab = (t2, initial = false) => {
+        origSetTab(t2, initial);
+        audio.playMusic(t2 === "shelter" ? "bgm_shelter" : "bgm_home");
+      };
+      if (tab === "shelter" && opts.arrive?.length) home.syncShelter(opts.arrive);
+      if (tab === "shelter" && featureOpen("shelter") && !save().flags.unlock_shelter) markAnnounced("shelter");
+      if (opts.wash) home.washMap(opts.wash);
+      setTimeout(() => this.announceQueue(), opts.wash ? 1500 : 400);
+    }
+    rebuildHome(tab) {
+      this.goHome(tab);
+    }
+    announceQueue() {
+      if (!this.home || this.scene !== this.homeScene) return;
+      const list = pendingUnlocks().filter((f) => !(f === "shelter" && this.home?.tab === "shelter"));
+      const hadUnlocks = list.length > 0;
+      const next = () => {
+        const f = list.shift();
+        if (!f) {
+          const s = save();
+          const d = today();
+          if (!hadUnlocks && !s.streak.claimedToday && s.stats.runs > 0 && !isOpen() && s.flags[`streakShown_${d}`] !== true) {
+            s.flags[`streakShown_${d}`] = true;
+            markDirty();
+            openStreak(() => {
+              this.home?.refreshCoins();
+              this.home?.refreshMapState();
+            });
+          }
+          return;
+        }
+        markAnnounced(f);
+        openUnlock(f, () => {
+          this.home?.refreshMapState();
+          setTimeout(next, 250);
+        });
+      };
+      next();
+    }
+    // ---------------------------------------------------------------- play
     playStage(stage) {
       const level2 = LEVELS.find((l) => l.stage === stage) ?? LEVELS[0];
-      this.scene?.destroy();
+      this.startRun(level2, null);
+    }
+    playDaily() {
+      const d = dailyChallenge(LEVELS);
+      track("daily_start", { mod: d.mod });
+      this.startRun(d.level, { mod: d.mod, mods: d.mods });
+    }
+    startRun(level2, daily) {
+      closeAll();
+      this.result?.destroy();
+      this.result = null;
+      this.home = null;
       const botName = this.params.get("bot");
       const bot = botName === "expert" ? BOT_EXPERT : botName === "novice" ? BOT_NOVICE : botName ? BOT_PLAYER : void 0;
       const seed = Number(this.params.get("seed") || Math.floor(Math.random() * 1e6));
+      const s = save();
+      const assist = !daily && assistOffered(level2.stage);
+      if (assist) track("assist_offer", { stage: level2.stage, fails: s.attempts[`s${level2.stage}`]?.failsInRow ?? 0 });
+      const attempt = (s.attempts[`s${level2.stage}`]?.tries ?? 0) + 1;
       const play = new PlayScreen({
         level: level2,
-        meta: this.metaPower(),
-        known: [],
+        meta: metaPower(assist),
+        known: knownSpecies(),
         seed,
-        attempt: 1,
-        tutorial: stage === 1,
-        firstRuns: 0,
+        attempt,
+        tutorial: level2.stage === 1 && s.stats.runs === 0 && !daily,
+        firstRuns: s.stats.runs,
         bot,
-        newMonster: level2.intro ?? null,
+        newMonster: !daily && !s.cleared[`s${level2.stage}`] ? level2.intro ?? null : null,
         revives: 1,
-        onSettings: () => {
-        }
-      }, this.ui, (r) => this.onPlayDone(play, r));
-      this.scene = { frame: (dt) => play.frame(dt), layout: () => play.layout(), destroy: () => play.destroy(), autoPause: () => play.autoPause() };
-      play.layout();
+        daily: daily ?? void 0,
+        onSettings: () => openSettings(() => {
+        })
+      }, this.ui, (r) => this.onPlayDone(play, r, !!daily, daily?.mod));
+      this.setScene({ frame: (dt) => play.frame(dt), layout: () => play.layout(), destroy: () => play.destroy(), autoPause: () => play.autoPause() });
+      if (assist) setTimeout(() => play.announce(t("stage.helpOffer"), "", "small"), 1200);
     }
-    onPlayDone(play, r) {
-      const box = h(
-        "div",
-        { style: "position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff6e2;border:4px solid #3a2416;border-radius:20px;padding:20px;font-size:22px;text-align:center" },
-        `${r.result} \xB7 ${r.run.coins} coins \xB7 ${r.run.rescued.length} animals`,
-        h("br"),
-        h("button", { class: "btn btn-primary", onclick: () => {
-          box.remove();
-          this.playStage(r.run.stage);
-        } }, "Again")
-      );
-      this.ui.appendChild(box);
-      this.scene = { frame: (dt) => play.renderIdle(dt), destroy: () => play.destroy() };
-      void screen;
+    onPlayDone(play, r, daily, mod) {
+      const sum = applyRun(r.run, r.result, r.seconds, r.deathSource, daily);
+      if (daily) track("daily_end", { mod, result: r.result });
+      flush();
+      this.scene = { frame: (dt) => play.renderIdle(dt), layout: () => play.layout(), destroy: () => play.destroy() };
+      if (this.params.has("bot") && this.params.has("loop")) {
+        setTimeout(() => this.playStage(nextStage()), 1500);
+        return;
+      }
+      this.showResult(sum, daily);
+    }
+    showResult(sum, daily) {
+      const win = sum.result === "clear";
+      const next = nextStage();
+      const goShelter = sum.newSpecies.length > 0 && featureOpen("shelter");
+      const playLabel = win ? daily ? t("result.map") : t("result.next") : t("result.retry");
+      const playFn = () => {
+        if (daily && win) this.goHome("map");
+        else if (daily) this.playDaily();
+        else this.playStage(win ? next : sum.stage);
+      };
+      const primary = goShelter ? { label: t("result.home"), icon: "ic_shelter", fn: () => this.goHome("shelter", { arrive: sum.newSpecies }) } : { label: playLabel, icon: win ? "ic_play" : "ic_reset", fn: playFn };
+      const secondary = goShelter ? { label: playLabel, icon: win ? "ic_play" : "ic_reset", fn: playFn } : { label: t("result.map"), icon: "ic_map", fn: () => this.goHome("map", { wash: sum.firstClear ? sum.stage : void 0 }) };
+      audio.playMusic(null);
+      if (featureOpen("upgrades") && !save().flags.unlock_upgrades) markAnnounced("upgrades");
+      this.result = new ResultScreen(this.ui, sum, { primary, secondary, showUpgrades: featureOpen("upgrades"), onEvolve: (tier) => openEvolve(tier), daily });
     }
   };
 
@@ -5203,6 +7848,10 @@
     loading.classList.add("done");
     setTimeout(() => loading.remove(), 500);
     app.start();
+    if (true) {
+      const dbg = await Promise.resolve().then(() => (init_panel(), panel_exports));
+      dbg.initDebug(app);
+    }
     const sessionStart = Date.now();
     window.addEventListener("pagehide", () => {
       save().stats.playSeconds += Math.round((Date.now() - sessionStart) / 1e3);

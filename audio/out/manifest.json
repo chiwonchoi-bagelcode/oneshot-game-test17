@@ -4,55 +4,64 @@
       "file": "bgm_home.mp3",
       "duration": 76.8,
       "bpm": 100,
-      "loop": true
+      "loop": true,
+      "samples": 3386880
     },
     "bgm_forest": {
       "file": "bgm_forest.mp3",
       "duration": 61.9355,
       "bpm": 124,
-      "loop": true
+      "loop": true,
+      "samples": 2731355
     },
     "bgm_village": {
       "file": "bgm_village.mp3",
       "duration": 64.0,
       "bpm": 120,
-      "loop": true
+      "loop": true,
+      "samples": 2822400
     },
     "bgm_lake": {
       "file": "bgm_lake.mp3",
       "duration": 66.2068,
       "bpm": 116,
-      "loop": true
+      "loop": true,
+      "samples": 2919722
     },
     "bgm_boss": {
       "file": "bgm_boss.mp3",
       "duration": 61.7142,
       "bpm": 140,
-      "loop": true
+      "loop": true,
+      "samples": 2721597
     },
     "bgm_shelter": {
       "file": "bgm_shelter.mp3",
       "duration": 72.0,
       "bpm": 80,
-      "loop": true
+      "loop": true,
+      "samples": 3175200
     },
     "stinger_clear": {
       "file": "stinger_clear.mp3",
       "duration": 3.5996,
       "bpm": 132,
-      "loop": false
+      "loop": false,
+      "samples": 158744
     },
     "stinger_fail": {
       "file": "stinger_fail.mp3",
       "duration": 2.5998,
       "bpm": 100,
-      "loop": false
+      "loop": false,
+      "samples": 114653
     },
     "stinger_evolve": {
       "file": "stinger_evolve.mp3",
       "duration": 3.1983,
       "bpm": 120,
-      "loop": false
+      "loop": false,
+      "samples": 141046
     }
   },
   "sfx": {
@@ -66,7 +75,7 @@
     },
     "ui_close": {
       "file": "ui_close.mp3",
-      "duration": 0.2647
+      "duration": 0.2649
     },
     "ui_confirm": {
       "file": "ui_confirm.mp3",
@@ -83,7 +92,8 @@
     "spray_loop": {
       "file": "spray_loop.mp3",
       "duration": 2.0,
-      "loop": true
+      "loop": true,
+      "samples": 88200
     },
     "pressure_full": {
       "file": "pressure_full.mp3",
@@ -103,15 +113,15 @@
     },
     "goo_burst_1": {
       "file": "goo_burst_1.mp3",
-      "duration": 0.3498
+      "duration": 0.3695
     },
     "goo_burst_2": {
       "file": "goo_burst_2.mp3",
-      "duration": 0.3675
+      "duration": 0.3677
     },
     "goo_burst_3": {
       "file": "goo_burst_3.mp3",
-      "duration": 0.3781
+      "duration": 0.3782
     },
     "goo_burst_big": {
       "file": "goo_burst_big.mp3",
@@ -131,7 +141,7 @@
     },
     "enemy_dash": {
       "file": "enemy_dash.mp3",
-      "duration": 0.2984
+      "duration": 0.2983
     },
     "enemy_land": {
       "file": "enemy_land.mp3",
@@ -183,7 +193,7 @@
     },
     "room_clear": {
       "file": "room_clear.mp3",
-      "duration": 1.403
+      "duration": 1.5087
     },
     "gate_open": {
       "file": "gate_open.mp3",
@@ -237,5 +247,10 @@
       "file": "unlock.mp3",
       "duration": 1.155
     }
+  },
+  "format": {
+    "sampleRate": 44100,
+    "codec": "mp3 (LAME CBR 96 kbps), music/stingers stereo, sfx mono",
+    "gapless": "Xing/LAME header carries encoder delay (576) + padding; gapless decoders (ffmpeg, Chrome, Firefox) return exactly `samples`. If a decoder returns more, the audio starts 1105 samples (25.06 ms) late: loop from loopStart = 1105/44100 for `duration` seconds."
   }
 }

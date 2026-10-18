@@ -44,10 +44,10 @@ def build():
     ch = chA + chA2 + chB + chC
 
     fl = s.track("flute", 73, pan=0.0, humanize_ms=5, vel_jitter=5)
-    fl.seq(s.bar(A), MEL_A_1_4 + " | " + MEL_A_5_8, v=88, gate=0.85)
-    fl.seq(s.bar(A2), MEL_A_1_4 + " | " + MEL_A2_5_8, v=92, gate=0.85)
-    fl.seq(s.bar(B), MEL_B, v=86, gate=0.97)
-    fl.seq(s.bar(C), MEL_C_FL, v=88, gate=0.85)
+    fl.seq(s.bar(A), MEL_A_1_4 + " | " + MEL_A_5_8, v=88, gate=0.85, expr=True)
+    fl.seq(s.bar(A2), MEL_A_1_4 + " | " + MEL_A2_5_8, v=92, gate=0.85, expr=True)
+    fl.seq(s.bar(B), MEL_B, v=86, gate=0.97, expr=True)
+    fl.seq(s.bar(C), MEL_C_FL, v=88, gate=0.85, expr=True)
 
     wh = s.track("whistle", 78, pan=0.12, humanize_ms=5, vel_jitter=4)
     wh.seq(s.bar(A2), MEL_A_1_4 + " | " + MEL_A2_5_8, v=70, gate=0.8)

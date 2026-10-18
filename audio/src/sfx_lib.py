@@ -319,7 +319,7 @@ def whoosh(dur, f0, f1, rng, peak=0.5, q=1.4, f_mid=None, attack_pow=2.0, releas
     else:
         pk = peak * dur
         fc = np.where(t < pk, f0 * (f_mid / f0) ** (t / pk), f_mid * (f1 / f_mid) ** ((t - pk) / (dur - pk)))
-    y = svf(src, fc, q, "bp")
+    y = hp(svf(src, fc, q, "bp"), 160.0)  # SVF skirts are gentle; keep pink-noise rumble out
     e = env_swell(dur, peak * dur, attack_pow, release_tau or dur * 0.25, floor=floor)
     return y * e
 
@@ -401,6 +401,15 @@ def finalize(x, peak_db=-3.0, fade_in_ms=3.0, fade_out_ms=10.0, tail_db=-60.0, m
     if m100_target is not None:
         g = min(g, db2lin(m100_target - m100(x)))
     return x * g
+
+
+def lv(x, target):
+    """Scale a layer so its max-100 ms loudness equals `target` (LUFS-like).  Used to balance
+    synthesized layers against (much quieter) FluidSynth note layers by intent, not by guesswork."""
+    x = np.asarray(x, dtype=np.float64)
+    if np.max(np.abs(x)) == 0:
+        return x
+    return x * db2lin(target - m100(x))
 
 
 def m100(x):

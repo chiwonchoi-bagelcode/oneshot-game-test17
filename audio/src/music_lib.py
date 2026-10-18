@@ -239,12 +239,30 @@ class Track:
             self.bend(t0 + (t1 - t0) * a, s0 + (s1 - s0) * a)
 
     # -- notation ----------------------------------------------------
-    def seq(self, t0, text, v=80, gate=None, transpose=0, accent_beats=True, vel_curve=None):
+    def _expression(self, t, d, base=104, peak=122, vib=38):
+        """Breath-like swell (CC11) + delayed vibrato (CC1) on long notes of a monophonic lead.
+        Ramps never cross the loop end, so the loop stays seamless."""
+        L = self.song.total_beats
+        end = t + d
+        if self.song.loop:
+            end = min(end, L - 0.02)
+        self.cc(t, 11, base)
+        self.cc(t, 1, 0)
+        if d >= 1.4 and end - t > 0.5:
+            mid = t + (end - t) * 0.45
+            self.cc_ramp(t + 0.05, mid, 11, base, peak, steps=6)
+            self.cc_ramp(mid, end, 11, peak, base + 6, steps=6)
+            self.cc_ramp(t + (end - t) * 0.35, t + (end - t) * 0.75, 1, 0, vib, steps=6)
+            self.cc(end, 1, 0)
+
+    def seq(self, t0, text, v=80, gate=None, transpose=0, accent_beats=True, vel_curve=None, expr=False):
         gate = self.gate if gate is None else gate
         evs, length = parse_seq(text, self.song.bar_beats)
         for (t, d, ps, art) in evs:
             if ps is None:
                 continue
+            if expr:
+                self._expression(t0 + t, d)
             vel = v
             g = gate
             if "'" in art:

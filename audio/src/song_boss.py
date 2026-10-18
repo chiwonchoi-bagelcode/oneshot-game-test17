@@ -106,7 +106,7 @@ def build():
     arp(pz, chC, pattern=(0, 1, 2, 1), step=0.5, low="c3", high="c4", n=3, vel=70, gate=0.4)
 
     hn = s.track("horns", 60, pan=0.15, humanize_ms=6, vel_jitter=4)
-    hn.seq(s.bar(B), HORN_B, v=70, gate=0.97, accent_beats=False)
+    hn.seq(s.bar(B), HORN_B, v=70, gate=0.97, accent_beats=False, expr=True)
     pad(hn, chC, low="g3", high="eb4", n=2, vel=58)
 
     tm = s.track("timpani", 47, pan=0.0, humanize_ms=3, vel_jitter=5)

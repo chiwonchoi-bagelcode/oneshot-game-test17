@@ -40,15 +40,15 @@ def build():
 
     # --- lead flute -----------------------------------------------------
     fl = s.track("flute", 73, pan=0.05, humanize_ms=7, vel_jitter=5)
-    fl.seq(s.bar(A), MEL_1_4 + " | " + MEL_A_5_8, v=86, gate=0.9)
-    fl.seq(s.bar(A2), MEL_1_4 + " | " + MEL_A2_5_8, v=88, gate=0.9)
-    fl.seq(s.bar(B), FLUTE_B, v=74, gate=0.85)
-    fl.seq(s.bar(A3), MEL_A3_1_4 + " | " + MEL_A3_5_8, v=92, gate=0.9)
+    fl.seq(s.bar(A), MEL_1_4 + " | " + MEL_A_5_8, v=86, gate=0.9, expr=True)
+    fl.seq(s.bar(A2), MEL_1_4 + " | " + MEL_A2_5_8, v=88, gate=0.9, expr=True)
+    fl.seq(s.bar(B), FLUTE_B, v=74, gate=0.85, expr=True)
+    fl.seq(s.bar(A3), MEL_A3_1_4 + " | " + MEL_A3_5_8, v=92, gate=0.9, expr=True)
 
     # --- clarinet: B melody + A'' counterline ---------------------------
     cl = s.track("clarinet", 71, pan=-0.3, humanize_ms=8, vel_jitter=5)
-    cl.seq(s.bar(B), CLAR_B, v=84, gate=0.93)
-    cl.seq(s.bar(A3), CLAR_A3, v=62, gate=0.97, accent_beats=False)
+    cl.seq(s.bar(B), CLAR_B, v=84, gate=0.93, expr=True)
+    cl.seq(s.bar(A3), CLAR_A3, v=62, gate=0.97, accent_beats=False, expr=True)
 
     # --- glockenspiel doubles the final chorus (sparkle) -------------------
     gl = s.track("glock", 9, pan=0.35, humanize_ms=5, vel_jitter=6)
