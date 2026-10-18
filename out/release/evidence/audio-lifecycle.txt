@@ -1,0 +1,4 @@
+Audio lifecycle check (dev build, headless Chromium; page visibility faked via document.hidden + visibilitychange)
+visible   {"ctx":"running","buffers":48,"music":"bgm_home","musicPaused":false}
+hidden    {"ctx":"suspended","buffers":48,"music":"bgm_home","musicPaused":true}
+returned  {"ctx":"running","buffers":48,"music":"bgm_home","musicPaused":false}

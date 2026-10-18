@@ -9,6 +9,16 @@ const R = 'out/release';
 // markdown → HTML with marked; wide tables get a scroll wrapper for phones
 const md = (src) => marked.parse(src).replace(/<table>/g, '<div class="tbl"><table>').replace(/<\/table>/g, '</table></div>');
 
+const EVIDENCE = [
+  ['ui-audit.jpg', 'UI 자동 검사 화면 일부 (22화면 × 2폰 × 2언어)', 'UI audit sample (22 screens × 2 phones × 2 languages)'],
+  ['qa-small-ko.jpg', '처음 하는 사람 여정: 작은 폰 · 한국어', 'First-timer journey: small phone · Korean'],
+  ['qa-large-en.jpg', '처음 하는 사람 여정: 큰 폰 · 영어', 'First-timer journey: large phone · English'],
+  ['qa-small-en.jpg', '처음 하는 사람 여정: 작은 폰 · 영어', 'First-timer journey: small phone · English'],
+  ['qa-large-ko.jpg', '처음 하는 사람 여정: 큰 폰 · 한국어', 'First-timer journey: large phone · Korean'],
+  ['trailer-review.jpg', '트레일러 구간별 검토 (처음·중간·끝 프레임)', 'Trailer review by segment (start, middle, end)'],
+  ['rescue-pop.jpg', '구출 순간: 동물이 효과 위로 튀어나옴', 'Rescue: the animal pops out above the effects'],
+  ['editor.jpg', '레벨 에디터', 'Level editor'],
+].filter(([f]) => existsSync(`${R}/evidence/${f}`));
 const read = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
 const shots = existsSync(`${R}/screenshots`) ? readdirSync(`${R}/screenshots`).filter((f) => f.endsWith('.png')).sort() : [];
 const mb = (p) => (existsSync(p) ? (statSync(p).size / 1e6).toFixed(1) + ' MB' : '');
@@ -68,8 +78,12 @@ code { background: var(--cream); padding: 1px 5px; border-radius: 6px; font-size
 pre { overflow-x: auto; background: var(--cream); padding: 10px; border-radius: 10px; }
 blockquote { margin: 8px 0; padding: 6px 12px; border-left: 4px solid var(--accent); color: var(--ink2); }
 .files td:first-child { white-space: nowrap; }
-[data-l] { display: none; }
-html[lang="ko"] [data-l="ko"], html[lang="en"] [data-l="en"] { display: revert; }
+html[lang="ko"] [data-l="en"], html[lang="en"] [data-l="ko"] { display: none !important; }
+.evidence { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 760px) { .evidence { grid-template-columns: 1fr; } }
+.evidence a { display: block; background: var(--paper); border: 2px solid var(--line); border-radius: 14px; padding: 8px; text-decoration: none; color: var(--ink); }
+.evidence img { width: 100%; height: 160px; object-fit: cover; object-position: top; border-radius: 8px; display: block; }
+.evidence span { display: block; font-size: 14px; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -97,7 +111,7 @@ html[lang="ko"] [data-l="ko"], html[lang="en"] [data-l="en"] { display: revert; 
   <section>
     <h2><span data-l="ko">트레일러</span><span data-l="en">Trailer</span></h2>
     <div class="media">
-      <video id="trailer" controls playsinline preload="metadata" poster="screenshots/${shots.find((s) => s.startsWith('ko-')) ?? ''}">
+      <video id="trailer" controls playsinline preload="metadata" poster="trailer-poster.jpg">
         <source src="trailer.mp4" type="video/mp4">
         <track kind="subtitles" src="subtitles/trailer.ko.vtt" srclang="ko" label="한국어" default>
         <track kind="subtitles" src="subtitles/trailer.en.vtt" srclang="en" label="English">
@@ -125,6 +139,12 @@ html[lang="ko"] [data-l="ko"], html[lang="en"] [data-l="en"] { display: revert; 
   </section>
 
   <section>
+    <h2><span data-l="ko">점검 근거</span><span data-l="en">Check evidence</span></h2>
+    <div class="evidence">${EVIDENCE.map(([f, ko, en]) => `<a href="evidence/${f}"><img src="evidence/${f}" alt="" loading="lazy"><span data-l="ko">${ko}</span><span data-l="en">${en}</span></a>`).join('')}</div>
+    <p class="note">${['validate.txt', 'progression.txt', 'art-check.txt', 'ui-audit.txt', 'perf-1x.txt', 'perf-4x.txt', 'perf-auto-4x.txt', 'audio-lifecycle.txt', 'trailer-review.md'].filter((f) => existsSync(`${R}/evidence/${f}`)).map((f) => `<a href="evidence/${f}">${f}</a>`).join(' · ')}</p>
+  </section>
+
+  <section>
     <h2><span data-l="ko">문서</span><span data-l="en">Documents</span></h2>
     <p class="note" data-l="en">The plan and the report are written in Korean.</p>
     <details class="doc"><summary><span data-l="ko">결과 보고서</span><span data-l="en">Report</span></summary>${report}</details>
@@ -138,7 +158,6 @@ html[lang="ko"] [data-l="ko"], html[lang="en"] [data-l="en"] { display: revert; 
     root.lang = l;
     document.querySelectorAll('.lang button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.set === l)); });
     if (video && video.textTracks) for (var i = 0; i < video.textTracks.length; i++) video.textTracks[i].mode = video.textTracks[i].language === l ? 'showing' : 'disabled';
-    var shot = document.querySelector('.shots[data-l="' + l + '"] img'); if (video && shot) video.poster = shot.getAttribute('src');
     try { localStorage.setItem('kit-lang', l); } catch (e) {}
   }
   document.querySelectorAll('.lang button').forEach(function (b) { b.addEventListener('click', function () { set(b.dataset.set); }); });

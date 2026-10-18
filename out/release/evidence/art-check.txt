@@ -1,0 +1,2 @@
+checked 540 frames in 2 atlases, 93 animation sets
+no issues

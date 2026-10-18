@@ -1,0 +1,32 @@
+stage  1 forest-01   rooms 3  expert 5/5 38s hp100% | player 5/5 43s hp91% | novice 5/5 39s hp97% | proof 5/5 | novice@zero 5/5
+stage  2 forest-02   rooms 3  expert 5/5 37s hp98% | player 5/5 39s hp81% | novice 5/5 32s hp100% | proof 5/5 | novice@zero 5/5
+stage  3 forest-03   rooms 3  expert 5/5 31s hp98% | player 5/5 37s hp94% | novice 5/5 36s hp96% | proof 5/5 | novice@zero 5/5
+stage  4 forest-04   rooms 4  expert 5/5 56s hp99% | player 5/5 53s hp90% | novice 5/5 57s hp85% | proof 5/5
+stage  5 forest-05   rooms 4  expert 5/5 53s hp90% | player 4/5 51s hp54% | novice 5/5 54s hp88% | proof 5/5
+stage  6 forest-06   rooms 3  expert 5/5 49s hp98% | player 5/5 52s hp92% | novice 5/5 51s hp94% | proof 5/5
+stage  7 forest-07   rooms 4  expert 5/5 55s hp96% | player 5/5 58s hp71% | novice 5/5 63s hp74% | proof 5/5
+stage  8 forest-08   rooms 4  expert 5/5 58s hp81% | player 5/5 58s hp91% | novice 5/5 59s hp74% | proof 5/5
+stage  9 forest-09   rooms 4  expert 5/5 70s hp92% | player 5/5 73s hp81% | novice 5/5 80s hp66% | proof 5/5
+stage 10 forest-10   rooms 4  expert 2/5 92s hp10% | player 0/5 27s hp0% | novice 0/5 67s hp0% | proof 5/5
+stage 11 village-01  rooms 4  expert 5/5 49s hp81% | player 4/5 52s hp55% | novice 5/5 63s hp59% | proof 5/5
+stage 12 village-02  rooms 4  expert 5/5 72s hp82% | player 1/5 58s hp14% | novice 5/5 81s hp48% | proof 5/5
+stage 13 village-03  rooms 4  expert 5/5 75s hp62% | player 2/5 55s hp24% | novice 5/5 74s hp68% | proof 5/5
+stage 14 village-04  rooms 3  expert 5/5 58s hp100% | player 5/5 58s hp97% | novice 5/5 64s hp67% | proof 5/5
+stage 15 village-05  rooms 4  expert 5/5 72s hp70% | player 3/5 67s hp17% | novice 5/5 76s hp34% | proof 5/5
+stage 16 village-06  rooms 4  expert 5/5 70s hp76% | player 4/5 72s hp36% | novice 4/5 75s hp59% | proof 5/5
+stage 17 village-07  rooms 4  expert 5/5 76s hp79% | player 5/5 88s hp54% | novice 2/5 88s hp11% | proof 5/5
+stage 18 village-08  rooms 4  expert 3/5 95s hp38% | player 3/5 82s hp28% | novice 0/5 67s hp0% | proof 4/5
+stage 19 village-09  rooms 5  expert 4/5 108s hp34% | player 0/5 76s hp0% | novice 2/5 102s hp11% | proof 5/5
+stage 20 village-10  rooms 5  expert 0/5 111s hp0% | player 0/5 55s hp0% | novice 0/5 49s hp0% | proof 5/5
+stage 21 lake-01     rooms 4  expert 5/5 89s hp71% | player 4/5 80s hp27% | novice 1/5 77s hp3% | proof 5/5
+stage 22 lake-02     rooms 5  expert 4/5 116s hp75% | player 0/5 40s hp0% | novice 1/5 64s hp13% | proof 5/5
+stage 23 lake-03     rooms 5  expert 3/5 110s hp41% | player 0/5 43s hp0% | novice 0/5 39s hp0% | proof 5/5
+stage 24 lake-04     rooms 3  expert 5/5 72s hp74% | player 1/5 39s hp15% | novice 3/5 59s hp49% | proof 4/5
+stage 25 lake-05     rooms 5  expert 5/5 127s hp82% | player 1/5 77s hp17% | novice 0/5 81s hp0% | proof 5/5
+stage 26 lake-06     rooms 5  expert 3/5 130s hp37% | player 0/5 89s hp0% | novice 0/5 33s hp0% | proof 5/5
+stage 27 lake-07     rooms 5  expert 2/5 109s hp18% | player 0/5 48s hp0% | novice 0/5 23s hp0% | proof 5/5
+stage 28 lake-08     rooms 5  expert 0/5 77s hp0% | player 0/5 41s hp0% | novice 0/5 24s hp0% | proof 5/5
+stage 29 lake-09     rooms 5  expert 1/5 88s hp14% | player 1/5 97s hp10% | novice 0/5 70s hp0% | proof 5/5
+stage 30 lake-10     rooms 5  expert 0/5 111s hp0% | player 0/5 113s hp0% | novice 0/5 63s hp0% | proof 4/5
+
+all stages valid

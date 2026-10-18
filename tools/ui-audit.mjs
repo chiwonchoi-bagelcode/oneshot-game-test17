@@ -27,7 +27,7 @@ const SCREENS = [
   ['streak', 'preset=mid&home=map', []],
   ['missions', 'preset=mid&home=map', ['close', 'click:.side-btn:nth-child(2)']],
   ['daily', 'preset=mid&home=map', ['close', 'click:.side-btn:nth-child(3)']],
-  ['festival', 'preset=mid&home=map', ['close', 'eval:window.__APP__.home && document.querySelector(".side-btn:nth-child(4)").click()']],
+  ['festival', 'preset=mid&home=map', ['close', 'click:.fest-pill.on']],
   ['album', 'preset=late&home=shelter', ['close', 'eval:window.__APP__.home.openAlbum()']],
   ['species', 'preset=late&home=shelter', ['close', 'eval:window.__APP__.home.openSpecies("fox")']],
   ['species-unknown', 'preset=mid&home=shelter', ['close', 'eval:window.__APP__.home.openSpecies("panda")']],

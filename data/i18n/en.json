@@ -70,7 +70,7 @@
  "revive.desc": "You can get back up once per run.",
  "revive.yes": "Get back up",
  "revive.no": "End run",
- "result.clear": "Area cleaned up!",
+ "result.clear": "Area cleaned!",
  "result.fail": "Good try!",
  "result.quit": "Run ended",
  "result.coins": "Coins",

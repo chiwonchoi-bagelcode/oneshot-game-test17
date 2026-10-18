@@ -2,7 +2,7 @@
 import levelsData from 'virtual:levels';
 import type { SpeciesId } from './config/balance';
 import { audio } from './engine/audio';
-import { quality } from './engine/quality';
+import { quality, qualityLevel, setQuality } from './engine/quality';
 import { onResize } from './engine/screen';
 import { onLangChange, t } from './i18n';
 import { PlayScreen, type PlayOutcome } from './game/play';
@@ -75,12 +75,25 @@ export class App {
     requestAnimationFrame(loop);
     // a light performance sample for analytics (frame pacing on real devices)
     setInterval(() => this.reportPerf(), 60000);
+    setInterval(() => this.autoQuality(), 5000);
   }
 
   private tick(dt: number) {
     if (dt > 0) { this.fpsSamples.push(1 / dt); if (this.fpsSamples.length > 600) this.fpsSamples.shift(); }
     this.scene?.frame(dt);
     this.debug.onFrame?.(dt);
+  }
+
+  // Graphics on "auto": if frames keep arriving late (median under 3/4 of the
+  // target rate over ~5 s), step down one level. Never steps back up in a session.
+  private autoQuality() {
+    if (save().settings.quality !== 'auto' || this.fpsSamples.length < 240) return;
+    const a = this.fpsSamples.slice(-240).sort((x, y) => x - y);
+    const med = a[120], cap = quality().fpsCap, lvl = qualityLevel();
+    if (med >= cap * 0.75 || lvl === 'low') return;
+    setQuality(lvl === 'high' ? 'medium' : 'low');
+    this.fpsSamples.length = 0;
+    track('perf_sample', { fpsMedian: Math.round(med), quality: quality().dprCap, lowered: lvl });
   }
 
   private reportPerf() {
@@ -142,6 +155,8 @@ export class App {
     const list = pendingUnlocks().filter((f) => !(f === 'shelter' && this.home?.tab === 'shelter'));
     const hadUnlocks = list.length > 0;
     const next = () => {
+      // a run may have started in the gap between two announcements: keep the rest for the next hub visit
+      if (!this.home || this.scene !== this.homeScene) return;
       const f = list.shift();
       if (!f) {
         // first stamp of the day, shown once when arriving at the hub (and not on top of other news)

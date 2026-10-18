@@ -196,7 +196,7 @@ button { font-family: inherit; color: inherit; }
 .fest-pill.on { display: flex; }
 .fest-pill > span:not(.ico) { overflow: hidden; text-overflow: ellipsis; }
 .fest-pill:active { transform: translateY(2px); }
-.sh-title { display: flex; align-items: center; gap: 4px; font-size: 18px; font-weight: 700; min-width: 0; }
+.sh-title { display: flex; align-items: center; gap: 4px; font-size: 18px; font-weight: 700; min-width: 32px; }
 .sh-title > span:not(.ico) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sh-count { font-size: 15px; color: var(--ink2); flex: none; }
 /* narrow topbar: the house icon already says "shelter", keep just the count */

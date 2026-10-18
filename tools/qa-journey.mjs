@@ -52,9 +52,11 @@ while (Date.now() - t0 < budget) {
     continue;
   }
   if (result) {
-    await page.waitForTimeout(3500); // let the rows play out (a person reads them)
+    await page.waitForTimeout(2000); // read the first rows, then tap to show the rest at once (the reveal is skippable)
+    await page.mouse.click(+W / 2, +H * 0.45); await page.waitForTimeout(600);
+    const skipped = await vis('.res-up');
     const title = await page.locator('.res-title').innerText().catch(() => '');
-    runs++; note('result', { title, seconds: Math.round((Date.now() - runStart) / 1000), save: await save() });
+    runs++; note('result', { title, seconds: Math.round((Date.now() - runStart) / 1000), upgradesShownAfterTap: skipped, save: await save() });
     if (runs <= 2 || runs % 4 === 0) await shot(`result-${runs}`);
     for (let i = 0; i < 4; i++) { if (!(await tap('.res-up .btn.up-buy.ok'))) break; buys++; await page.waitForTimeout(700); if (await vis('.modal-evolve')) { await shot('evolve'); note('evolve'); await tap('.modal-evolve .btn-primary'); await page.waitForTimeout(600); } }
     await tap('.res-pri'); await page.waitForTimeout(1500);
@@ -95,9 +97,10 @@ const other = LANG.startsWith('ko') ? 'en' : 'ko';
 const segs = page.locator('.modal-back .seg-btn');
 for (let i = 0; i < (await segs.count()); i++) { const txt = await segs.nth(i).innerText(); if ((other === 'en' && /English/.test(txt)) || (other === 'ko' && /한국어/.test(txt))) { const b = await segs.nth(i).boundingBox(); await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); break; } }
 await page.waitForTimeout(900); await shot('settings-lang');
+const settingsStillOpen = await vis('.modal-back .seg-btn');
 await tap('.modal-back .btn-close'); await page.waitForTimeout(800);
 const navAfter = await page.locator('.nav-btn').first().innerText();
-note('language', { before: navBefore, after: navAfter, changed: navBefore !== navAfter });
+note('language', { before: navBefore, after: navAfter, changed: navBefore !== navAfter, settingsStillOpen });
 await shot('hub-other-lang');
 
 // reload: progress kept?

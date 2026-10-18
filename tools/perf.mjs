@@ -15,29 +15,35 @@ const SCENES = [
 const levelOf = (n) => JSON.parse(readFileSync(`data/levels/stage-${String(n).padStart(2, '0')}.json`, 'utf8'));
 const browser = await chromium.launch();
 const rows = [];
-for (const q of ['low', 'medium', 'high']) for (const [name, query, start, secs] of SCENES) {
+const QUALITIES = (process.env.QUALITIES || 'low,medium,high').split(','); // 'auto' = the game picks and may step down
+for (const q of QUALITIES) for (const [name, query, start, secs] of SCENES) {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 760 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   const cdp = await ctx.newCDPSession(page);
   if (start) await page.addInitScript((d) => localStorage.setItem('splash-editor-test', d), JSON.stringify({ level: levelOf(start.stage), room: start.room }));
-  // apply the preset, then reload so the chosen quality is read at boot
+  // apply the preset, then set the quality while the game page is closed (it writes its save on hide) and come back
   await page.goto(`http://localhost:8123/dev.html?${query}`); await page.waitForTimeout(1500);
+  await page.goto('http://localhost:8123/profile.json');
   await page.evaluate((qq) => { const k = 'splash-rescue-save'; const s = JSON.parse(localStorage.getItem(k)); s.settings.quality = qq; localStorage.setItem(k, JSON.stringify(s)); }, q);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: THROTTLE });
-  await page.reload();
+  await page.goto(`http://localhost:8123/dev.html?${query}`);
   await page.waitForFunction(() => window.__APP__?.playing, null, { timeout: 60000 });
   const loadMs = await page.evaluate(() => performance.getEntriesByType('navigation')[0]?.duration ?? 0);
-  await page.waitForTimeout(1500);
-  const res = await page.evaluate((secs) => new Promise((done) => {
+  await page.waitForTimeout(q === 'auto' ? 15000 : 1500); // auto: give the step-down time to act
+  // frame pacing (rAF) and the game's own main-thread cost per frame (sim + draw calls)
+  const { dts: res, js } = await page.evaluate((secs) => new Promise((done) => {
+    const app = window.__APP__; const sc = app.scene; const orig = sc.frame; const js = [];
+    sc.frame = (dt) => { const t0 = performance.now(); orig(dt); js.push(performance.now() - t0); };
     const dts = []; let last = 0; const end = performance.now() + secs * 1000;
-    const f = (t) => { if (last) dts.push(t - last); last = t; if (t < end) requestAnimationFrame(f); else done(dts); };
+    const f = (t) => { if (last) dts.push(t - last); last = t; if (t < end) requestAnimationFrame(f); else { sc.frame = orig; done({ dts, js }); } };
     requestAnimationFrame(f);
   }), secs);
-  const app = await page.evaluate(() => ({ q: JSON.parse(localStorage.getItem('splash-rescue-save')).settings.quality, room: window.__APP__?.playing?.run?.roomIndex }));
+  const jsSorted = [...js].sort((a, b) => a - b); const jp = (p) => +jsSorted[Math.min(jsSorted.length - 1, Math.floor(jsSorted.length * p))].toFixed(1);
+  const app = await page.evaluate(() => ({ q: JSON.parse(localStorage.getItem('splash-rescue-save')).settings.quality + ' dpr ' + (document.getElementById('game').width / innerWidth).toFixed(2), room: window.__APP__?.playing?.run?.roomIndex }));
   const sorted = [...res].sort((a, b) => a - b);
   const pct = (p) => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
   const cap = q === 'low' ? 30 : 60;
-  rows.push({ quality: app.q, scene: name, room: app.room, throttle: `${THROTTLE}x`, rafMedianFps: Math.round(1000 / pct(0.5)), rafP10Fps: Math.round(1000 / pct(0.9)), longFrames: res.filter((d) => d > 50).length, samples: res.length, gameCap: cap, navMs: Math.round(loadMs) });
+  rows.push({ quality: app.q, scene: name, room: app.room, throttle: `${THROTTLE}x`, rafMedianFps: Math.round(1000 / pct(0.5)), rafP10Fps: Math.round(1000 / pct(0.9)), jsMsP50: jp(0.5), jsMsP90: jp(0.9), jsMsMax: jp(0.999), samples: res.length, gameCap: cap, navMs: Math.round(loadMs) });
   await ctx.close();
 }
 await browser.close();

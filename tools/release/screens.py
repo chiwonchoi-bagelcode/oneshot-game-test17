@@ -10,11 +10,11 @@ FONT = {'ko': 'art/fonts/Jua-Regular.ttf', 'en': 'art/fonts/Fredoka-SemiBold.ttf
 SHOTS = {
     'ko': [('01-wash', 'first/00375', '멈추면 물줄기 발사!\n끈적이를 시원하게 씻어요'),
            ('02-rescue', 'first/00396', '갇힌 동물을 구하면\n졸졸 따라와요'),
-           ('03-boss', 'boss/02685', '물총을 키워서\n대장 끈적이까지!'),
+           ('03-boss', 'boss/02265', '물총을 키워서\n대장 끈적이까지!'),
            ('04-shelter', 'shelter/00120', '구한 친구들이 뛰노는\n나만의 보호소')],
     'en': [('01-wash', 'firstEn/00375', 'Stop to spray!\nWash the goo away'),
            ('02-rescue', 'firstEn/00396', 'Free trapped animals\nand they follow you'),
-           ('03-boss', 'bossEn/02685', 'Grow your water gun\nand wash the boss away'),
+           ('03-boss', 'bossEn/02265', 'Grow your water gun\nand wash the boss away'),
            ('04-shelter', 'shelterEn/00120', 'A shelter full of\nthe friends you saved')],
 }
 W, H, CAP = 1080, 1920, 360
