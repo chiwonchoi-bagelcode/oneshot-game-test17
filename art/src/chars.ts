@@ -47,15 +47,6 @@ export function drawKid(ctx: Ctx, pose: Partial<Pose>) {
   for (const by of [-50, -38]) { ctx.save(); ctx.fillStyle = '#2a96f0'; ctx.strokeStyle = OUT; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(11, by, 2.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
   // reflective stripe
   ctx.save(); ctx.clip(coat); ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.fillRect(-30, -33, 60, 4); ctx.fillStyle = 'rgba(120,200,255,0.8)'; ctx.fillRect(-30, -29, 60, 2); ctx.restore();
-  // arms up (victory) drawn behind head
-  if (P.arms) {
-    for (const s of [-1, 1]) {
-      const a = new Path2D(); a.moveTo(s * 14, -58); a.quadraticCurveTo(s * 30, -78, s * 26, -96); a.lineTo(s * 18, -92); a.quadraticCurveTo(s * 20, -76, s * 8, -62); a.closePath();
-      cel(ctx, a, { x: s > 0 ? 8 : -30, y: -98, w: 24, h: 40 }, PAL.coat, PAL.coatDark, null, { outline: OUTW * 0.9 });
-      const h = ellipsePath(s * 23, -98, 7, 7);
-      cel(ctx, h, { x: s * 23 - 7, y: -105, w: 14, h: 14 }, '#2a96f0', '#1a5fae', '#7fc8ff', { outline: OUTW * 0.8 });
-    }
-  }
   // head
   const hx = 3, hy = -86, hr = 29;
   const head = ellipsePath(hx, hy, hr, hr * 0.96);
@@ -86,6 +77,15 @@ export function drawKid(ctx: Ctx, pose: Partial<Pose>) {
   blush(ctx, hx + 27, hy + 12, 5); blush(ctx, hx - 1, hy + 12, 5);
   mouth(ctx, hx + 16, hy + 15, 11, P.mouth);
   if (P.gooed) gooSplat(ctx, hx - 6, hy - 18);
+  // arms up (victory), drawn in front so the cheer reads clearly
+  if (P.arms) {
+    for (const sd of [-1, 1]) {
+      const a = new Path2D(); a.moveTo(sd * 12, -58); a.quadraticCurveTo(sd * 36, -70, sd * 40, -100); a.lineTo(sd * 31, -103); a.quadraticCurveTo(sd * 27, -76, sd * 6, -64); a.closePath();
+      cel(ctx, a, { x: sd > 0 ? 6 : -40, y: -104, w: 34, h: 48 }, PAL.coat, PAL.coatDark, PAL.coatLight, { outline: OUTW * 0.9 });
+      const hd = ellipsePath(sd * 36, -106, 7.5, 7.5);
+      cel(ctx, hd, { x: sd * 36 - 8, y: -114, w: 16, h: 16 }, '#2a96f0', '#1a5fae', '#7fc8ff', { outline: OUTW * 0.8 });
+    }
+  }
   ctx.restore();
 }
 
@@ -119,10 +119,13 @@ function drawKidSitting(ctx: Ctx, P: Pose) {
   cel(ctx, hel, { x: hx - 31, y: hy - 45, w: 76, h: 45 }, PAL.blue, PAL.blueDark, PAL.blueLight, { so: [-8, -7], gloss: true });
   eye(ctx, hx + 6, hy + 3, 6, 'sad'); eye(ctx, hx + 21, hy + 3, 6, 'sad');
   mouth(ctx, hx + 14, hy + 16, 10, 'wavy');
-  // goo draped over
-  const goo = smoothPath([[-30, -30], [-22, -60], [-4, -100], [18, -104], [34, -86], [28, -64], [34, -40], [26, -20], [30, -6], [10, -10], [0, -2], [-12, -10], [-28, -4]], true, 0.7);
-  ctx.save(); ctx.globalAlpha = 0.78;
-  cel(ctx, goo, { x: -30, y: -104, w: 64, h: 102 }, g[0], g[1], g[2], { gloss: true, outline: OUTW * 0.9 });
+  // a goo blob dripping from the helmet and a puddle around: messy but cute
+  const blob = smoothPath([[-4, -104], [6, -114], [20, -112], [30, -100], [28, -90], [24, -84], [22, -72], [17, -82], [10, -84], [6, -74], [2, -86], [-6, -94]], true, 0.7);
+  cel(ctx, blob, { x: -8, y: -116, w: 40, h: 44 }, g[0], g[1], g[2], { gloss: true, outline: OUTW * 0.9 });
+  ctx.save(); ctx.globalAlpha = 0.85;
+  const pud = smoothPath([[-40, -4], [-30, -14], [-6, -12], [16, -16], [40, -8], [44, 2], [20, 8], [-10, 6], [-36, 6]], true, 0.8);
+  cel(ctx, pud, { x: -44, y: -16, w: 88, h: 24 }, g[0], g[1], g[2], { gloss: true, outline: OUTW * 0.8 });
+  ctx.restore();
   ctx.restore();
 }
 
@@ -232,7 +235,7 @@ const PACKS: ((ctx: Ctx) => void)[] = [
 ];
 
 export function registerChars() {
-  const W = 150, H = 180, AX = 72, AY = 168;
+  const W = 156, H = 194, AX = 75, AY = 172;
   const at = (fn: (c: Ctx) => void) => (ctx: Ctx) => { ctx.translate(AX, AY); fn(ctx); };
   // idle
   for (let i = 0; i < 4; i++) {
@@ -256,13 +259,11 @@ export function registerChars() {
     sprite(`kid_win_${i}`, W, H, AX, AY, at((c) => drawKid(c, { jump: j, mood: 'happy', mouth: 'grin', arms: true, legF: i ? 4 : 0, legB: i ? -4 : 0, liftF: i ? 4 : 0, liftB: i ? 4 : 0, squash: i === 0 ? 0.93 : 1.03 })));
   }
   for (let i = 0; i < 2; i++) sprite(`kid_sad_${i}`, W, H, AX, AY, at((c) => drawKid(c, { sit: true, bob: i ? 1 : 0 })));
-  // portrait for UI
-  sprite('kid_portrait', 120, 120, 60, 112, (ctx) => { ctx.translate(58, 168); drawKid(ctx, { mood: 'happy', mouth: 'grin' }); });
 
   // guns: anchor at the hand
   GUNS.forEach((g, i) => {
-    const w = [70, 90, 96, 112, 120, 132, 168][i], h = [56, 64, 70, 70, 74, 84, 104][i];
-    const ax = [26, 28, 30, 44, 50, 36, 46][i], ay = h / 2 + 2;
+    const w = [74, 94, 100, 140, 156, 140, 176][i], h = [60, 68, 74, 78, 82, 92, 112][i];
+    const ax = [28, 30, 32, 58, 66, 40, 50][i], ay = h / 2 + 2;
     let muzzle: [number, number] = [0, 0];
     sprite(`gun_${i}`, w, h, ax, ay, (ctx) => { ctx.translate(ax, ay); muzzle = g(ctx); point(`gun_${i}`, 'muzzle', muzzle[0], muzzle[1]); });
   });

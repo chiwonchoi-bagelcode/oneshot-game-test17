@@ -24,7 +24,7 @@ if (art.error) { console.error(art.error); process.exit(1); }
 if (existsSync(OUT)) rmSync(OUT, { recursive: true });
 mkdirSync(OUT, { recursive: true });
 mkdirSync(path.join(OUT, 'icons'), { recursive: true });
-const meta = { atlases: {}, points: art.points };
+const meta = { atlases: {}, points: art.points, trim: art.trim };
 for (const [name, a] of Object.entries(art.atlases)) {
   const files = a.pages.map((d, i) => {
     const f = `${name}-${i}.png`;
@@ -38,6 +38,9 @@ writeFileSync(path.join(OUT, 'atlas.json'), JSON.stringify(meta));
 // lossless-safe palette compression keeps edges clean; skip if pngquant missing
 try {
   const pngs = Object.values(meta.atlases).flatMap((a) => a.pages.map((f) => path.join(OUT, f)));
-  execFileSync('pngquant', ['--force', '--ext', '.png', '--quality', '80-98', '--speed', '3', ...pngs]);
+  for (const f of pngs) {
+    try { execFileSync('pngquant', ['--force', '--ext', '.png', '--quality', '70-98', '--speed', '3', f]); }
+    catch { console.warn('pngquant kept the lossless file for', f); }
+  }
 } catch (e) { console.warn('pngquant skipped:', e.message); }
 console.log('art:', Object.entries(meta.atlases).map(([k, a]) => `${k}=${a.pages.length}p/${Object.keys(a.frames).length}f`).join(' '), 'icons=', Object.keys(art.single).length);

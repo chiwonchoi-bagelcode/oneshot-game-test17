@@ -339,7 +339,7 @@ export function drawAnimal(ctx: Ctx, name: string, pose: Partial<Pose>) {
 }
 
 export function register() {
-  const W = 130, H = 130, AX = 62, AY = 118;
+  const W = 150, H = 152, AX = 74, AY = 128;
   for (const name of Object.keys(SPECIES)) {
     const at = (pose: Partial<Pose>) => (ctx: Ctx) => { ctx.translate(AX, AY); drawAnimal(ctx, name, pose); };
     for (let i = 0; i < 4; i++) {
@@ -355,14 +355,14 @@ export function register() {
     for (let i = 0; i < 2; i++) sprite(`a_${name}_trapped_${i}`, W, H, AX, AY, at({ sit: true, mood: 'worried', mouth: 'o', head: i ? -2 : 0, swing: i ? 2 : -2, wag: i ? 0.2 : -0.2 }));
     // UI portrait (head and shoulders, happy)
     sprite(`p_${name}`, 120, 120, 60, 60, (ctx) => {
-      ctx.translate(58, 112); ctx.scale(1.05, 1.05);
+      ctx.translate(62, 112); ctx.scale(0.94, 0.94);
       drawAnimal(ctx, name, { mood: 'happy', mouth: 'smile', earUp: 0.5 });
     });
   }
   // silhouettes for friends not met yet (same pose as the portrait)
   for (const name of Object.keys(SPECIES)) {
     sprite(`sil_${name}`, 120, 120, 60, 60, (ctx) => {
-      ctx.save(); ctx.translate(58, 112); ctx.scale(1.05, 1.05);
+      ctx.save(); ctx.translate(62, 112); ctx.scale(0.94, 0.94);
       drawAnimal(ctx, name, { mood: 'normal', mouth: 'smile' }); ctx.restore();
       ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = '#6b5a7e'; ctx.fillRect(0, 0, 120, 120);
       ctx.globalCompositeOperation = 'source-over';

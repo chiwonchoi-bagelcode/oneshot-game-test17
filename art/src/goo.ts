@@ -198,7 +198,7 @@ export function register() {
   const kinds: [string, number, number, number][] = [
     // name, frame w, frame h, anchor y (bottom of body)
     ['blob', 140, 150, 130], ['mini', 96, 96, 84], ['spitter', 140, 160, 140], ['splitter', 160, 160, 140], ['dasher', 160, 160, 140],
-    ['chunky', 220, 210, 190], ['nest', 210, 170, 148], ['jumper', 150, 180, 160],
+    ['chunky', 244, 232, 208], ['nest', 210, 170, 148], ['jumper', 150, 180, 160],
   ];
   for (const [k, w, h, ay] of kinds) for (const e of ['normal', 'hit', 'charge'] as Expr[]) {
     sprite(`m_${k}_${e}`, w, h, w / 2, ay, (ctx) => { ctx.translate(w / 2, ay); DRAW[k](ctx, e, 0); });
@@ -209,7 +209,7 @@ export function register() {
   const bosses: [string, string, 'crown' | 'tophat' | 'shell'][] = [['forest', 'royal', 'crown'], ['village', 'amber', 'tophat'], ['lake', 'teal', 'shell']];
   for (const [n, c, hat] of bosses) for (const e of ['normal', 'hit', 'charge'] as Expr[]) {
     const d = bossDraw(c, hat);
-    sprite(`m_boss_${n}_${e}`, 360, 360, 180, 330, (ctx) => { ctx.translate(180, 330); d(ctx, e); });
+    sprite(`m_boss_${n}_${e}`, 420, 452, 210, 392, (ctx) => { ctx.translate(210, 392); d(ctx, e); });
   }
   // enemy droplet: purple with a white rim and a tiny face so it never reads as water
   for (let f = 0; f < 2; f++) sprite(`goo_drop_${f}`, 48, 48, 24, 24, (ctx) => {
@@ -275,8 +275,8 @@ export function register() {
     ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
   });
   // goo barrier stretched across the exit gate
-  sprite('gate_goo', 160, 90, 80, 80, (ctx) => {
-    ctx.translate(80, 80);
+  sprite('gate_goo', 180, 110, 90, 92, (ctx) => {
+    ctx.translate(90, 92);
     const col = GOO.violet;
     const p = smoothPath([[-66, 0], [-66, -46], [-40, -64], [0, -70], [40, -64], [66, -46], [66, 0], [40, 6], [20, -4], [0, 8], [-24, -2], [-44, 8]], true, 0.8);
     cel(ctx, p, { x: -66, y: -70, w: 132, h: 78 }, col[0], col[1], col[2], { gloss: true });

@@ -426,13 +426,13 @@ export function register() {
   ob('ob_stump', 80, 70, 56, stump);
   ob('ob_log', 250, 90, 74, log);
   ob('ob_fence', 320, 70, 56, (c) => fenceH(c, 288));
-  ob('ob_fencev', 50, 360, 330, (c) => fenceV(c, 288));
+  ob('ob_fencev', 64, 384, 344, (c) => fenceV(c, 288));
   ob('ob_house', 360, 300, 270, (c) => house(c, 1));
   ob('ob_house2', 360, 300, 270, (c) => house(c, 2));
   ob('ob_barrel', 76, 90, 78, barrel);
   ob('ob_crate', 120, 100, 86, crate);
   ob('ob_hay', 140, 100, 86, hay);
-  ob('ob_well', 150, 180, 160, well);
+  ob('ob_well', 170, 196, 172, well);
   ob('ob_cart', 230, 140, 120, cart);
   ob('ob_reeds', 90, 110, 100, reeds);
   ob('ob_shellrock', 140, 120, 104, shellRock);
@@ -444,7 +444,7 @@ export function register() {
   ob('ob_windmill', 210, 300, 280, windmill);
   ob('mp_node', 96, 70, 40, (c) => mapNode(c, false));
   ob('mp_node_boss', 110, 84, 48, (c) => mapNode(c, true));
-  ob('mp_flag', 60, 80, 74, flag);
+  ob('mp_flag', 96, 92, 80, flag);
   ob('mp_sign', 250, 140, 130, signBoard);
   ob('sh_house', 380, 290, 280, shelterHouse);
   ob('sh_basket', 90, 50, 40, basket);
@@ -455,7 +455,7 @@ export function register() {
   for (let i = 0; i < 2; i++) ob(`d_pebble_${i}`, 30, 26, 20, (c) => pebble(c, 40 + i));
   ob('d_clover', 30, 30, 24, clover);
   ob('d_shell', 30, 26, 22, shell);
-  ob('d_leaf', 30, 22, 16, leaf);
+  ob('d_leaf', 36, 28, 19, leaf);
   // soft round shadow under everything that stands on the ground
   sprite('shadow', 120, 48, 60, 24, (ctx) => {
     ctx.save(); ctx.scale(1, 0.4);

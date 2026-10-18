@@ -20,13 +20,17 @@ export function presetSave(name: string) {
   return s;
 }
 
-export function initDebug(app: App) {
-  const p = new URLSearchParams(location.search);
-  const preset = p.get('preset');
+// Applied before the save is loaded so the whole session starts from the preset.
+export function applyPresetFromUrl() {
+  const preset = new URLSearchParams(location.search).get('preset');
   if (preset && !sessionStorage.getItem('preset-applied-' + preset)) {
     sessionStorage.setItem('preset-applied-' + preset, '1');
-    replaceSave(presetSave(preset));
+    try { localStorage.setItem('splash-rescue-save', JSON.stringify(presetSave(preset))); } catch { /* ignore */ }
   }
+}
+
+export function initDebug(app: App) {
+  const p = new URLSearchParams(location.search);
   const btn = document.createElement('button');
   btn.textContent = 'DEV';
   btn.className = 'dbg-toggle';
@@ -57,5 +61,4 @@ export function initDebug(app: App) {
       log,
     );
   };
-  if (p.get('home')) app.goHome(p.get('home') as 'map');
 }

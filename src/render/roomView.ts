@@ -7,6 +7,7 @@ import { Rng } from '../sim/rng';
 import type { RoomSim } from '../sim/room';
 import type { Monster, Region, SimEvent } from '../sim/types';
 import { buildBackground, buildStatics, REGION_LOOK, type StaticSprite } from './background';
+import { save } from '../meta/save';
 import { Particles } from './particles';
 
 const GOO_COLOR: Record<string, string> = {
@@ -593,9 +594,15 @@ export class RoomView {
   private drawBullets(ctx: CanvasRenderingContext2D) {
     const t = this.time;
     const sh = frame('shadow');
+    const contrast = save().settings.contrast;
     for (const b of this.sim.bullets) {
       if (!b.alive) continue;
       if (sh) drawFrame(ctx, sh, b.x, b.y + 16, b.r / 30, false, 0, 0.7);
+      if (contrast) {
+        // high-visibility mode: a thick yellow ring with a dark edge, readable for any color vision
+        ctx.lineWidth = 6; ctx.strokeStyle = '#1b1b1b'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 1.25, 0, Math.PI * 2); ctx.stroke();
+        ctx.lineWidth = 3.5; ctx.strokeStyle = '#ffe600'; ctx.stroke();
+      }
       draw(ctx, `goo_drop_${Math.floor(t * 8 + b.x * 0.1) % 2}`, b.x, b.y, (b.r / 7.5) * 1.0);
     }
   }

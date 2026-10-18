@@ -118,14 +118,14 @@ export function register() {
     ctx.strokeStyle = g; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(20, 20, 12, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.ellipse(14, 13, 4.5, 2.6, -0.7, 0, Math.PI * 2); ctx.fill();
   });
-  for (let f = 0; f < 3; f++) sprite(`p_sparkle_${f}`, 36, 36, 18, 18, (ctx) => { ctx.translate(18, 18); sparkle(ctx, f); });
+  for (let f = 0; f < 3; f++) sprite(`p_sparkle_${f}`, 40, 40, 20, 20, (ctx) => { ctx.translate(20, 20); sparkle(ctx, f); });
   sprite('p_star', 40, 40, 20, 20, (ctx) => { const p = star(20, 21, 15, 7, 5); cel(ctx, p, { x: 5, y: 6, w: 30, h: 30 }, PAL.gold, PAL.goldDark, PAL.goldLight, { outline: 2 }); });
   sprite('p_heart', 36, 34, 18, 17, (ctx) => { const p = heartPath(18, 17, 12); cel(ctx, p, { x: 4, y: 4, w: 28, h: 26 }, '#ff6f91', '#d94a70', '#ffb3c6', { outline: 2.2, gloss: true }); });
-  for (let f = 0; f < 4; f++) sprite(`p_coin_${f}`, 34, 34, 17, 17, (ctx) => { ctx.translate(17, 17); coin(ctx, f); });
-  sprite('p_xp', 30, 36, 15, 20, (ctx) => {
-    const g = ctx.createRadialGradient(15, 20, 0, 15, 20, 16); g.addColorStop(0, 'rgba(160,240,255,0.7)'); g.addColorStop(1, 'rgba(160,240,255,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, 30, 36);
-    const p = dropPath(15, 22, 8); cel(ctx, p, { x: 7, y: 9, w: 16, h: 22 }, '#4fc3f7', '#1f8fd0', '#bdf0ff', { outline: 2, gloss: true });
+  for (let f = 0; f < 4; f++) sprite(`p_coin_${f}`, 40, 40, 20, 20, (ctx) => { ctx.translate(20, 20); coin(ctx, f); });
+  sprite('p_xp', 38, 42, 19, 23, (ctx) => {
+    const g = ctx.createRadialGradient(19, 23, 0, 19, 23, 17); g.addColorStop(0, 'rgba(160,240,255,0.7)'); g.addColorStop(1, 'rgba(160,240,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 38, 42);
+    const p = dropPath(19, 25, 8); cel(ctx, p, { x: 11, y: 12, w: 16, h: 22 }, '#4fc3f7', '#1f8fd0', '#bdf0ff', { outline: 2, gloss: true });
   });
   sprite('p_heal', 36, 40, 18, 22, (ctx) => {
     const p = dropPath(18, 25, 10); cel(ctx, p, { x: 8, y: 9, w: 20, h: 27 }, '#ff7fa3', '#d9507a', '#ffc2d4', { outline: 2.2, gloss: true });
@@ -151,7 +151,7 @@ export function register() {
     ctx.fillStyle = OUT; ctx.beginPath(); ctx.moveTo(24, 46); ctx.lineTo(18, 40); ctx.lineTo(30, 40); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#7a4a10'; ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', 24, 25);
   });
-  sprite('mk_zzz', 44, 40, 22, 38, (ctx) => {
+  sprite('mk_zzz', 56, 60, 26, 56, (ctx) => { ctx.translate(4, 16);
     ctx.font = 'bold 18px sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = OUT; ctx.fillStyle = '#ffffff';
     for (const [t, x, y, s] of [['z', 8, 34, 14], ['z', 20, 22, 18], ['Z', 30, 10, 22]] as [string, number, number, number][]) { ctx.font = `bold ${s}px sans-serif`; ctx.strokeText(t, x, y); ctx.fillText(t, x, y); }
   });

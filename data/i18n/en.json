@@ -156,7 +156,7 @@
  "shelter.collect": "Collect gifts",
  "shelter.giftReady": "Gifts: {n} coins",
  "shelter.giftNone": "Gathering gifts",
- "shelter.giftRate": "{n} coins/hour · up to {h}h",
+ "shelter.giftRate": "{n}/hour · max {h}h",
  "shelter.bond": "Bond {n}",
  "shelter.bondNext": "Rescue {n} more to raise bond",
  "shelter.bondMax": "Max bond!",

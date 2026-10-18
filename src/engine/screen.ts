@@ -15,6 +15,14 @@ export function onResize(f: () => void) { listeners.push(f); }
 let probe: HTMLDivElement | null = null;
 
 function readSafe() {
+  const forced = (window as unknown as { __SAFE__?: { t: number; b: number } }).__SAFE__;
+  if (forced) {
+    // test hook: emulate a notch/home indicator on desktop browsers
+    screen.safe.top = forced.t; screen.safe.bottom = forced.b; screen.safe.left = 0; screen.safe.right = 0;
+    document.documentElement.style.setProperty('--sat', forced.t + 'px');
+    document.documentElement.style.setProperty('--sab', forced.b + 'px');
+    return;
+  }
   if (!probe) {
     probe = document.createElement('div');
     probe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';

@@ -17,6 +17,7 @@ declare global { interface Window { __APP__?: App; __CAPTURE__?: boolean } }
 
 async function boot() {
   const t0 = performance.now();
+  if (__DEV__) (await import('./debug/panel')).applyPresetFromUrl();
   const { data, fresh } = loadSave();
   setLang(data.settings.lang === 'auto' ? deviceLang() : data.settings.lang);
   setQuality(data.settings.quality === 'auto' ? defaultQuality() : data.settings.quality);

@@ -37,9 +37,13 @@ export function setIcon(el: HTMLElement, name: string, size: number) {
   if (!ps) { ps = [f.img.naturalWidth, f.img.naturalHeight]; pageSize.set(src, ps); }
   const k = size / Math.max(f.w, f.h);
   const ox = (size - f.w * k) / 2, oy = (size - f.h * k) / 2;
+  // pad non-square frames instead of offsetting, so neighbouring atlas sprites never show in the gap
+  el.style.boxSizing = 'border-box';
+  el.style.padding = `${oy}px ${ox}px`;
+  el.style.backgroundOrigin = el.style.backgroundClip = 'content-box';
   el.style.backgroundImage = `url("${src}")`;
   el.style.backgroundSize = `${ps[0] * k}px ${ps[1] * k}px`;
-  el.style.backgroundPosition = `${-f.x * k + ox}px ${-f.y * k + oy}px`;
+  el.style.backgroundPosition = `${-f.x * k}px ${-f.y * k}px`;
   el.style.backgroundRepeat = 'no-repeat';
 }
 
