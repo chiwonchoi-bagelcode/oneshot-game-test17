@@ -1,7 +1,7 @@
 // Boot: load assets behind a loading screen, restore the save, then hand over
 // to the app (screens + main loop).
 import { loadAtlases } from './engine/atlas';
-import { audio, type AudioManifest } from './engine/audio';
+import { audio } from './engine/audio';
 import { initInput } from './engine/input';
 import { defaultQuality, setQuality, quality } from './engine/quality';
 import { initScreen } from './engine/screen';

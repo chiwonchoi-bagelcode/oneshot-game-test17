@@ -508,7 +508,7 @@
   },
   "25": {
    "upgrades": {
-    "power": 15,
+    "power": 14,
     "range": 12,
     "health": 14,
     "pressure": 9,
@@ -532,7 +532,7 @@
     "penguin": 1
    },
    "assist": 0,
-   "coinsSpent": 17085
+   "coinsSpent": 16085
   },
   "26": {
    "upgrades": {
@@ -592,7 +592,7 @@
   },
   "28": {
    "upgrades": {
-    "power": 16,
+    "power": 15,
     "range": 13,
     "health": 15,
     "pressure": 10,
@@ -612,11 +612,11 @@
     "chick": 3,
     "otter": 4,
     "turtle": 4,
-    "frog": 4,
+    "frog": 3,
     "penguin": 1
    },
    "assist": 0,
-   "coinsSpent": 22035
+   "coinsSpent": 20735
   },
   "29": {
    "upgrades": {
@@ -668,8 +668,8 @@
     "lamb": 2,
     "chick": 3,
     "otter": 5,
-    "turtle": 4,
-    "frog": 5,
+    "turtle": 5,
+    "frog": 4,
     "penguin": 1,
     "panda": 1
    },
@@ -1086,7 +1086,7 @@
    "upgrades": {
     "power": 13,
     "range": 11,
-    "health": 13,
+    "health": 12,
     "pressure": 8,
     "splash": 9
    },
@@ -1113,7 +1113,7 @@
     "power": 13,
     "range": 11,
     "health": 13,
-    "pressure": 9,
+    "pressure": 8,
     "splash": 10
    },
    "bonds": {
@@ -1138,7 +1138,7 @@
    "upgrades": {
     "power": 14,
     "range": 12,
-    "health": 14,
+    "health": 13,
     "pressure": 9,
     "splash": 10
    },
@@ -1218,7 +1218,7 @@
   "27": {
    "upgrades": {
     "power": 15,
-    "range": 13,
+    "range": 12,
     "health": 15,
     "pressure": 10,
     "splash": 11
@@ -1274,7 +1274,7 @@
    "upgrades": {
     "power": 16,
     "range": 13,
-    "health": 16,
+    "health": 15,
     "pressure": 11,
     "splash": 12
    },
@@ -1319,7 +1319,7 @@
     "lamb": 2,
     "chick": 3,
     "otter": 5,
-    "turtle": 4,
+    "turtle": 5,
     "frog": 5,
     "penguin": 1,
     "panda": 1

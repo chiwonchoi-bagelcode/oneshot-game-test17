@@ -22,7 +22,8 @@ let shots = 0;
 const shot = async (label) => page.screenshot({ path: `${out}/${String(++shots).padStart(3, '0')}-${label}.png` });
 const save = () => page.evaluate(() => { const s = JSON.parse(localStorage.getItem('splash-rescue-save') || 'null'); return s && { coins: s.coins, runs: s.stats.runs, cleared: Object.keys(s.cleared).length, rescued: Object.values(s.rescued).reduce((a, b) => a + b, 0), species: Object.keys(s.rescued).length, upgrades: Object.values(s.upgrades).reduce((a, b) => a + b, 0), streak: s.streak.day, lang: s.settings.lang, day: s.dayOffset }; });
 const vis = (sel) => page.locator(sel).first().isVisible().catch(() => false);
-const tap = async (sel) => { const b = await page.locator(sel).first().boundingBox().catch(() => null); if (!b) return false; await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); return true; };
+// scroll the control into view (a person scrolls too), then tap its centre
+const tap = async (sel) => { const l = page.locator(sel).first(); if (!(await l.count())) return false; await l.scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => {}); await page.waitForTimeout(250); const b = await l.boundingBox().catch(() => null); if (!b) return false; await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); return true; };
 
 await page.goto('http://localhost:8123/index.html?bot=player&seed=11');
 await page.waitForTimeout(2500);
@@ -106,8 +107,10 @@ note('reload', { same: JSON.stringify({ ...before, lang: 0 }) === JSON.stringify
 await shot('after-reload');
 
 // next day: move the save's day offset like the debug panel, come back
+// (edit the save while the game page is closed: the game writes its save when the page hides)
+await page.goto('http://localhost:8123/profile.json');
 await page.evaluate(() => { const k = 'splash-rescue-save'; const s = JSON.parse(localStorage.getItem(k)); s.dayOffset = (s.dayOffset || 0) + 1; localStorage.setItem(k, JSON.stringify(s)); });
-await page.reload(); await page.waitForTimeout(2500);
+await page.goto('http://localhost:8123/index.html?bot=player&seed=12'); await page.waitForTimeout(2500);
 if (await vis('.title-go')) { await tap('.title-go'); await page.waitForTimeout(2500); }
 await page.waitForTimeout(1000);
 const day2Popup = (await vis('.modal-back')) ? await page.locator('.modal-back .modal-title').first().innerText().catch(() => '?') : null;

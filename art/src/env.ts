@@ -17,7 +17,7 @@ function makeNoise(seed: number, terms = 7, maxF = 6) {
   };
 }
 
-function wrapDraw(ctx: Ctx, fn: (ox: number, oy: number) => void) {
+function wrapDraw(fn: (ox: number, oy: number) => void) {
   for (const ox of [-T, 0, T]) for (const oy of [-T, 0, T]) fn(ox, oy);
 }
 
@@ -38,7 +38,7 @@ function grassTile(ctx: Ctx, seed: number, extras: boolean) {
   for (let i = 0; i < 26; i++) {
     const x = rng.r(0, T), y = rng.r(0, T), h = rng.r(5, 10), lean = rng.r(-3, 3);
     const dark = rng.n() < 0.55;
-    wrapDraw(ctx, (ox, oy) => {
+    wrapDraw((ox, oy) => {
       ctx.strokeStyle = dark ? rgba(PAL.grassDeep, 0.55) : rgba(PAL.grassLight, 0.75); ctx.lineWidth = 1.8;
       ctx.beginPath(); ctx.moveTo(x + ox, y + oy); ctx.quadraticCurveTo(x + ox + lean * 0.3, y + oy - h * 0.6, x + ox + lean, y + oy - h); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x + ox + 2.5, y + oy); ctx.quadraticCurveTo(x + ox + 2.5 + lean * 0.2, y + oy - h * 0.4, x + ox + 3 + lean * 0.6, y + oy - h * 0.7); ctx.stroke();

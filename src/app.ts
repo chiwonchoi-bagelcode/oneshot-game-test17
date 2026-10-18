@@ -3,7 +3,7 @@ import levelsData from 'virtual:levels';
 import type { SpeciesId } from './config/balance';
 import { audio } from './engine/audio';
 import { quality } from './engine/quality';
-import { screen, onResize } from './engine/screen';
+import { onResize } from './engine/screen';
 import { onLangChange, t } from './i18n';
 import { PlayScreen, type PlayOutcome } from './game/play';
 import {
@@ -106,8 +106,9 @@ export class App {
   // ---------------------------------------------------------------- hub
   private homeScene: Scene | null = null;
 
-  goHome(tab: Tab = 'map', opts: { wash?: number; arrive?: SpeciesId[] } = {}) {
-    closeAll();
+  // relabel: rebuild the hub in place (language change) without closing the open popup or re-announcing
+  goHome(tab: Tab = 'map', opts: { wash?: number; arrive?: SpeciesId[]; relabel?: boolean } = {}) {
+    if (!opts.relabel) closeAll();
     this.result?.destroy(); this.result = null;
     refreshDay();
     audio.playMusic(tab === 'shelter' ? 'bgm_shelter' : 'bgm_home');
@@ -131,10 +132,10 @@ export class App {
     if (tab === 'shelter' && featureOpen('shelter') && !save().flags.unlock_shelter) markAnnounced('shelter');
     if (opts.wash) home.washMap(opts.wash);
     // queued announcements, one after another, never during play
-    setTimeout(() => this.announceQueue(), opts.wash ? 1500 : 400);
+    if (!opts.relabel) setTimeout(() => this.announceQueue(), opts.wash ? 1500 : 400);
   }
 
-  private rebuildHome(tab: Tab) { this.goHome(tab); }
+  private rebuildHome(tab: Tab) { this.goHome(tab, { relabel: true }); }
 
   private announceQueue() {
     if (!this.home || this.scene !== this.homeScene) return;

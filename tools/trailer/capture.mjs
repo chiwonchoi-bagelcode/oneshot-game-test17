@@ -32,6 +32,8 @@ const cdp = await ctx.newCDPSession(page);
 await cdp.send('Animation.enable');
 await cdp.send('Animation.setPlaybackRate', { playbackRate: RATE });
 await page.goto(`http://localhost:8123/dev.html?capture=1&${take.query}`);
+// after install() the fake clock still follows real time; pause it so page timers move only with runFor
+await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 100);
 // boot: let timers run until the capture hook exists
 for (let i = 0; i < 400; i++) {
   if (await page.evaluate(() => typeof window.__advance === 'function')) break;

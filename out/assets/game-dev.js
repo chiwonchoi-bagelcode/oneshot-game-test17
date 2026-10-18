@@ -1070,7 +1070,6 @@
     }
   }
   function initDebug(app) {
-    const p = new URLSearchParams(location.search);
     const btn = document.createElement("button");
     btn.textContent = "DEV";
     btn.className = "dbg-toggle";
@@ -5438,7 +5437,6 @@
       this.lastFriends = -1;
       this.lastLv = -1;
       this.hintState = { moved: false, fired: false, pressureShown: false, rescueShown: false, gateShown: false, idleTime: 0, rangeShown: 0, rescueTime: 0 };
-      this.wasFiring = false;
       this.roomStart = 0;
       this.coinStreak = 0;
       this.coinStreakT = 0;
@@ -5447,6 +5445,8 @@
       this.introShown = false;
       this.botInput = { mx: 0, my: 0 };
       this.ghostBase = null;
+      this.ribbonCur = null;
+      this.ribbonTimers = [];
       this.o = o;
       this.onDone = onDone;
       this.run = createRun(o.level, o.meta, { known: o.known, seed: o.seed, mods: o.daily?.mods, revives: o.revives, daily: !!o.daily });
@@ -5809,13 +5809,29 @@
       }
     }
     // One big message at a time, in the upper middle of the screen.
+    // One ribbon at a time. A rescue or a warning never waits behind a tip: it cuts
+    // the tip short (the tip comes back afterwards) and goes ahead of other news.
     announce(title, sub = "", cls = "") {
+      const item = { title, sub, cls };
+      const urgent = cls === "rescue" || cls === "warn";
+      if (urgent && this.ribbonBusy && this.ribbonCur?.cls === "small") {
+        for (const id of this.ribbonTimers) clearTimeout(id);
+        this.ribbonQ.push(this.ribbonCur);
+        this.ribbonQ.unshift(item);
+        this.nextRibbon();
+        return;
+      }
       if (this.ribbonQ.length >= 2) this.ribbonQ.shift();
-      this.ribbonQ.push({ title, sub, cls });
+      if (urgent) {
+        const i = this.ribbonQ.findIndex((q) => q.cls !== "rescue" && q.cls !== "warn");
+        if (i >= 0) this.ribbonQ.splice(i, 0, item);
+        else this.ribbonQ.push(item);
+      } else this.ribbonQ.push(item);
       if (!this.ribbonBusy) this.nextRibbon();
     }
     nextRibbon() {
       const it = this.ribbonQ.shift();
+      this.ribbonCur = it ?? null;
       if (!it) {
         this.ribbonBusy = false;
         return;
@@ -5825,8 +5841,7 @@
       this.ribbon.replaceChildren(h("div", { class: "ribbon-title" }, it.title), it.sub ? h("div", { class: "ribbon-sub" }, it.sub) : "");
       void this.ribbon.offsetWidth;
       this.ribbon.classList.add("show");
-      setTimeout(() => this.ribbon.classList.remove("show"), 1150);
-      setTimeout(() => this.nextRibbon(), 1400);
+      this.ribbonTimers = [window.setTimeout(() => this.ribbon.classList.remove("show"), 1150), window.setTimeout(() => this.nextRibbon(), 1400)];
     }
     showBanner(title, sub, desc, sprite) {
       this.banner.replaceChildren(
@@ -7852,8 +7867,9 @@
       this.home = null;
       this.setScene(title);
     }
+    // relabel: rebuild the hub in place (language change) without closing the open popup or re-announcing
     goHome(tab = "map", opts = {}) {
-      closeAll();
+      if (!opts.relabel) closeAll();
       this.result?.destroy();
       this.result = null;
       refreshDay();
@@ -7887,10 +7903,10 @@
       if (tab === "shelter" && opts.arrive?.length) home.syncShelter(opts.arrive);
       if (tab === "shelter" && featureOpen("shelter") && !save().flags.unlock_shelter) markAnnounced("shelter");
       if (opts.wash) home.washMap(opts.wash);
-      setTimeout(() => this.announceQueue(), opts.wash ? 1500 : 400);
+      if (!opts.relabel) setTimeout(() => this.announceQueue(), opts.wash ? 1500 : 400);
     }
     rebuildHome(tab) {
-      this.goHome(tab);
+      this.goHome(tab, { relabel: true });
     }
     announceQueue() {
       if (!this.home || this.scene !== this.homeScene) return;

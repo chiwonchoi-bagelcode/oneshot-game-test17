@@ -22,6 +22,8 @@ OBR = {'tree': 30, 'pine': 26, 'bush': 24, 'rock': 26, 'boulder': 40, 'stump': 2
 
 INTRO = {3: 'splitter', 5: 'dasher', 7: 'chunky', 9: 'nest', 10: 'boss', 11: 'jumper', 13: 'flyer', 20: 'boss', 30: 'boss'}
 BREATHER = {6, 14, 24}
+# the first area of a new region (water appears in 21) is a welcome, not a wall
+WELCOME = {21}
 THINK = {4, 8, 12, 16, 18, 23, 26, 28}
 
 ANIMALS = {
@@ -47,12 +49,13 @@ def rooms_for(stage):
     if stage in BREATHER: return 3
     if stage <= 10: return 4
     if stage <= 20: return 4 if stage < 19 else 5
-    return 5 if stage != 24 else 4
+    return 5 if stage not in (24,) and stage not in WELCOME else 4
 
 def budget(stage, ri, nrooms):
     base = 4.4 + 0.5 * stage
     ramp = 0.8 + 0.4 * (ri / max(1, nrooms - 1))
     if stage in BREATHER: base *= 1.35
+    if stage in WELCOME: base *= 0.85
     return base * ramp
 
 class Room:

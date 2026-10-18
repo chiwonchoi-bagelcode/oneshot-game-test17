@@ -14,7 +14,7 @@ import { RoomSim } from '../sim/room';
 import { applySkill, createRun, refreshStats, rollSkillChoices, xpProgress, type RunMods, type RunState } from '../sim/run';
 import type { LevelDef, MetaPower, SimEvent } from '../sim/types';
 import { track } from '../services/analytics';
-import { h, icon, once, setIcon } from '../ui/dom';
+import { h, icon, once } from '../ui/dom';
 import { closeModal, openModal } from '../ui/modal';
 
 export interface PlayOptions {
@@ -51,7 +51,6 @@ export class PlayScreen {
   private revivesUsed = 0;
   private lastHp = -1; private lastCoins = -1; private lastXp = -1; private lastFriends = -1; private lastLv = -1;
   private hintState = { moved: false, fired: false, pressureShown: false, rescueShown: false, gateShown: false, idleTime: 0, rangeShown: 0, rescueTime: 0 };
-  private wasFiring = false;
   private roomStart = 0;
   private coinStreak = 0; private coinStreakT = 0;
   private finished = false;
@@ -335,21 +334,36 @@ export class PlayScreen {
   }
 
   // One big message at a time, in the upper middle of the screen.
+  // One ribbon at a time. A rescue or a warning never waits behind a tip: it cuts
+  // the tip short (the tip comes back afterwards) and goes ahead of other news.
   announce(title: string, sub = '', cls = '') {
+    const item = { title, sub, cls };
+    const urgent = cls === 'rescue' || cls === 'warn';
+    if (urgent && this.ribbonBusy && this.ribbonCur?.cls === 'small') {
+      for (const id of this.ribbonTimers) clearTimeout(id);
+      this.ribbonQ.push(this.ribbonCur);
+      this.ribbonQ.unshift(item);
+      this.nextRibbon();
+      return;
+    }
     if (this.ribbonQ.length >= 2) this.ribbonQ.shift();
-    this.ribbonQ.push({ title, sub, cls });
+    if (urgent) { const i = this.ribbonQ.findIndex((q) => q.cls !== 'rescue' && q.cls !== 'warn'); if (i >= 0) this.ribbonQ.splice(i, 0, item); else this.ribbonQ.push(item); }
+    else this.ribbonQ.push(item);
     if (!this.ribbonBusy) this.nextRibbon();
   }
 
+  private ribbonCur: { title: string; sub: string; cls: string } | null = null;
+  private ribbonTimers: number[] = [];
+
   private nextRibbon() {
     const it = this.ribbonQ.shift();
+    this.ribbonCur = it ?? null;
     if (!it) { this.ribbonBusy = false; return; }
     this.ribbonBusy = true;
     this.ribbon.className = 'ribbon ' + it.cls;
     this.ribbon.replaceChildren(h('div', { class: 'ribbon-title' }, it.title), it.sub ? h('div', { class: 'ribbon-sub' }, it.sub) : '');
     void this.ribbon.offsetWidth; this.ribbon.classList.add('show');
-    setTimeout(() => this.ribbon.classList.remove('show'), 1150);
-    setTimeout(() => this.nextRibbon(), 1400);
+    this.ribbonTimers = [window.setTimeout(() => this.ribbon.classList.remove('show'), 1150), window.setTimeout(() => this.nextRibbon(), 1400)];
   }
 
   private showBanner(title: string, sub: string, desc: string, sprite: string | null) {

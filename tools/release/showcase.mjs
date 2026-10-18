@@ -1,47 +1,13 @@
 // Writes out/release/index.html: the release kit on one page (trailer with
 // subtitle tracks, screenshots, icon, feature graphic, store text in both
-// languages, plan and report). Markdown is rendered here so the page is static.
+// languages, plan and report). Markdown is rendered here (marked) so the page is static.
 // Usage: node tools/release/showcase.mjs   (after the release files exist)
 import { readFileSync, readdirSync, writeFileSync, existsSync, statSync } from 'node:fs';
+import { marked } from 'marked';
 
 const R = 'out/release';
-const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const inline = (s) => esc(s)
-  .replace(/`([^`]+)`/g, '<code>$1</code>')
-  .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-
-// a small markdown renderer: headings, paragraphs, lists, tables, quotes, code
-function md(src) {
-  const lines = src.replace(/\r/g, '').split('\n'); const out = []; let i = 0;
-  while (i < lines.length) {
-    const l = lines[i];
-    if (!l.trim()) { i++; continue; }
-    let m;
-    if ((m = l.match(/^(#{1,4})\s+(.*)/))) { out.push(`<h${m[1].length + 1}>${inline(m[2])}</h${m[1].length + 1}>`); i++; continue; }
-    if (l.startsWith('```')) { const buf = []; i++; while (i < lines.length && !lines[i].startsWith('```')) buf.push(lines[i++]); i++; out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`); continue; }
-    if (l.startsWith('>')) { const buf = []; while (i < lines.length && lines[i].startsWith('>')) buf.push(lines[i++].replace(/^>\s?/, '')); out.push(`<blockquote>${inline(buf.join(' '))}</blockquote>`); continue; }
-    if (l.startsWith('|')) {
-      const rows = []; while (i < lines.length && lines[i].startsWith('|')) rows.push(lines[i++]);
-      const cells = (r) => r.replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
-      const body = rows.filter((r, k) => k !== 1 || !/^\|[\s:|-]+\|$/.test(r));
-      out.push('<div class="tbl"><table>' + body.map((r, k) => `<tr>${cells(r).map((c) => k === 0 ? `<th>${inline(c)}</th>` : `<td>${inline(c)}</td>`).join('')}</tr>`).join('') + '</table></div>');
-      continue;
-    }
-    if (/^\s*([-*]|\d+\.)\s/.test(l)) {
-      const ordered = /^\s*\d+\./.test(l); const items = [];
-      while (i < lines.length && (/^\s*([-*]|\d+\.)\s/.test(lines[i]) || (/^\s{2,}\S/.test(lines[i]) && items.length))) {
-        if (/^\s*([-*]|\d+\.)\s/.test(lines[i])) items.push(lines[i].replace(/^\s*([-*]|\d+\.)\s/, '')); else items[items.length - 1] += '<br>' + lines[i].trim();
-        i++;
-      }
-      out.push(`<${ordered ? 'ol' : 'ul'}>${items.map((t) => `<li>${inline(t).replace(/&lt;br&gt;/g, '<br>')}</li>`).join('')}</${ordered ? 'ol' : 'ul'}>`);
-      continue;
-    }
-    const buf = []; while (i < lines.length && lines[i].trim() && !/^(#|\||>|```|\s*([-*]|\d+\.)\s)/.test(lines[i])) buf.push(lines[i++]);
-    out.push(`<p>${buf.map(inline).join('<br>')}</p>`);
-  }
-  return out.join('\n');
-}
+// markdown → HTML with marked; wide tables get a scroll wrapper for phones
+const md = (src) => marked.parse(src).replace(/<table>/g, '<div class="tbl"><table>').replace(/<\/table>/g, '</table></div>');
 
 const read = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
 const shots = existsSync(`${R}/screenshots`) ? readdirSync(`${R}/screenshots`).filter((f) => f.endsWith('.png')).sort() : [];

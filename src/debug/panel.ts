@@ -30,7 +30,6 @@ export function applyPresetFromUrl() {
 }
 
 export function initDebug(app: App) {
-  const p = new URLSearchParams(location.search);
   const btn = document.createElement('button');
   btn.textContent = 'DEV';
   btn.className = 'dbg-toggle';

@@ -96,7 +96,8 @@ const sub = 'out/release/subtitles';
 mkdirSync(sub, { recursive: true });
 const ts = (s, sep) => { const ms = Math.round(s * 1000); const h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, ss = Math.floor(ms / 1000) % 60, r = ms % 1000; return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}${sep}${String(r).padStart(3, '0')}`; };
 for (const lang of ['ko', 'en']) {
-  const items = EDL.subs.map((s) => ({ ...s, to: Math.min(s.to, duration) }));
+  const segStart = (i) => cuts[i].at, segEnd = (i) => (i + 1 < cuts.length ? cuts[i + 1].at : duration);
+  const items = EDL.subs.map((s) => ({ ...s, from: s.from ?? segStart(s.segs[0]), to: Math.min(s.to ?? segEnd(s.segs[1]), duration) }));
   writeFileSync(`${sub}/trailer.${lang}.vtt`, 'WEBVTT\n\n' + items.map((s, i) => `${i + 1}\n${ts(s.from, '.')} --> ${ts(s.to, '.')}\n${s[lang]}\n`).join('\n'));
   writeFileSync(`${sub}/trailer.${lang}.srt`, items.map((s, i) => `${i + 1}\n${ts(s.from, ',')} --> ${ts(s.to, ',')}\n${s[lang]}\n`).join('\n'));
 }
