@@ -141,7 +141,7 @@ html[lang="ko"] [data-l="en"], html[lang="en"] [data-l="ko"] { display: none !im
   <section>
     <h2><span data-l="ko">점검 근거</span><span data-l="en">Check evidence</span></h2>
     <div class="evidence">${EVIDENCE.map(([f, ko, en]) => `<a href="evidence/${f}"><img src="evidence/${f}" alt="" loading="lazy"><span data-l="ko">${ko}</span><span data-l="en">${en}</span></a>`).join('')}</div>
-    <p class="note">${['validate.txt', 'progression.txt', 'art-check.txt', 'ui-audit.txt', 'perf-1x.txt', 'perf-4x.txt', 'perf-auto-4x.txt', 'audio-lifecycle.txt', 'trailer-review.md'].filter((f) => existsSync(`${R}/evidence/${f}`)).map((f) => `<a href="evidence/${f}">${f}</a>`).join(' · ')}</p>
+    <p class="note">${['validate.txt', 'progression.txt', 'art-check.txt', 'ui-audit.txt', 'perf-1x.txt', 'perf-4x.txt', 'perf-auto-4x.txt', 'audio-lifecycle.txt', 'input-check.txt', 'trailer-review.md'].filter((f) => existsSync(`${R}/evidence/${f}`)).map((f) => `<a href="evidence/${f}">${f}</a>`).join(' · ')}</p>
   </section>
 
   <section>

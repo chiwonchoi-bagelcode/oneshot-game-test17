@@ -1542,6 +1542,8 @@
       this.pid = -1;
       this.down = (e) => {
         if (!this.enabled) return;
+        const t2 = e.target;
+        if (t2?.closest?.("button, a, input, select, textarea, .modal-back, .result")) return;
         if (this.pid !== -1 && e.pointerType === "touch") return;
         e.preventDefault();
         this.pid = e.pointerId;
@@ -1584,12 +1586,20 @@
       this.up = (e) => {
         if (e.pointerId === this.pid) this.release();
       };
+      // keyboard: held direction keys move, letting go of all of them stops (and fires)
+      this.keys = /* @__PURE__ */ new Set();
       this.el = el;
-      el.addEventListener("pointerdown", this.down, { passive: false });
+      window.addEventListener("pointerdown", this.down, { passive: false });
       window.addEventListener("pointermove", this.move, { passive: false });
       window.addEventListener("pointerup", this.up);
       window.addEventListener("pointercancel", this.up);
-      window.addEventListener("blur", () => this.release());
+      window.addEventListener("blur", () => {
+        this.release();
+        this.keys.clear();
+        this.applyKeys();
+      });
+      window.addEventListener("keydown", (e) => this.key(e, true));
+      window.addEventListener("keyup", (e) => this.key(e, false));
     }
     release() {
       this.pid = -1;
@@ -1598,6 +1608,38 @@
       j.mx = 0;
       j.my = 0;
     }
+    key(e, on) {
+      const k = KEYS[e.code];
+      if (!k) return;
+      if (on && !this.enabled) return;
+      if (on) this.keys.add(e.code);
+      else this.keys.delete(e.code);
+      if (this.enabled) e.preventDefault();
+      this.applyKeys();
+    }
+    applyKeys() {
+      if (this.pid !== -1) return;
+      let x = 0, y = 0;
+      for (const c of this.keys) {
+        x += KEYS[c][0];
+        y += KEYS[c][1];
+      }
+      const d = Math.hypot(x, y);
+      const j = this.joy;
+      j.mx = d ? x / d : 0;
+      j.my = d ? y / d : 0;
+      if (d) j.everMoved = true;
+    }
+  };
+  var KEYS = {
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+    ArrowUp: [0, -1],
+    ArrowDown: [0, 1],
+    KeyA: [-1, 0],
+    KeyD: [1, 0],
+    KeyW: [0, -1],
+    KeyS: [0, 1]
   };
   var shared = null;
   function initInput(el) {

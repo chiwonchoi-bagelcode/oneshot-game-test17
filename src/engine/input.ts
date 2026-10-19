@@ -1,5 +1,7 @@
 // One-thumb floating joystick: touch anywhere, drag to move, lift (or hold
 // still) to stop. Works with touch, mouse and pen through Pointer Events.
+// Presses are taken from the whole window (the HUD layer covers the canvas),
+// except on buttons and popups. On a keyboard, arrow keys / WASD move too.
 export interface Joystick {
   active: boolean; ox: number; oy: number; x: number; y: number;
   mx: number; my: number; // output vector (length 0..1)
@@ -17,15 +19,19 @@ export class InputController {
 
   constructor(el: HTMLElement) {
     this.el = el;
-    el.addEventListener('pointerdown', this.down, { passive: false });
+    window.addEventListener('pointerdown', this.down, { passive: false });
     window.addEventListener('pointermove', this.move, { passive: false });
     window.addEventListener('pointerup', this.up);
     window.addEventListener('pointercancel', this.up);
-    window.addEventListener('blur', () => this.release());
+    window.addEventListener('blur', () => { this.release(); this.keys.clear(); this.applyKeys(); });
+    window.addEventListener('keydown', (e) => this.key(e, true));
+    window.addEventListener('keyup', (e) => this.key(e, false));
   }
 
   private down = (e: PointerEvent) => {
     if (!this.enabled) return;
+    const t = e.target as Element | null;
+    if (t?.closest?.('button, a, input, select, textarea, .modal-back, .result')) return; // controls keep their taps
     if (this.pid !== -1 && e.pointerType === 'touch') return; // first finger wins
     e.preventDefault();
     this.pid = e.pointerId;
@@ -50,7 +56,29 @@ export class InputController {
   private up = (e: PointerEvent) => { if (e.pointerId === this.pid) this.release(); };
 
   release() { this.pid = -1; const j = this.joy; j.active = false; j.mx = 0; j.my = 0; }
+
+  // keyboard: held direction keys move, letting go of all of them stops (and fires)
+  private keys = new Set<string>();
+  private key(e: KeyboardEvent, on: boolean) {
+    const k = KEYS[e.code]; if (!k) return;
+    if (on && !this.enabled) return;
+    if (on) this.keys.add(e.code); else this.keys.delete(e.code);
+    if (this.enabled) e.preventDefault();
+    this.applyKeys();
+  }
+  private applyKeys() {
+    if (this.pid !== -1) return; // a finger or mouse drag is in charge
+    let x = 0, y = 0; for (const c of this.keys) { x += KEYS[c][0]; y += KEYS[c][1]; }
+    const d = Math.hypot(x, y); const j = this.joy;
+    j.mx = d ? x / d : 0; j.my = d ? y / d : 0;
+    if (d) j.everMoved = true;
+  }
 }
+
+const KEYS: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+  KeyA: [-1, 0], KeyD: [1, 0], KeyW: [0, -1], KeyS: [0, 1],
+};
 
 let shared: InputController | null = null;
 export function initInput(el: HTMLElement): InputController { shared = new InputController(el); return shared; }

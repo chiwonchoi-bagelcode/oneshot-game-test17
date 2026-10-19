@@ -1,0 +1,4 @@
+OK   mouse moved 415 world units
+OK   touch moved 364 world units
+OK   keys  moved 170 world units
+OK   pause moved 0 world units, paused=pause
